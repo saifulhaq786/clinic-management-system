@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+body {
+  background-color: #050810;
+  color: #cbd5e1;
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Global sleek dark inputs */
+input, select, textarea {
+  @apply w-full bg-[#0f172a] border border-[#1e293b] p-4 rounded-2xl outline-none focus:border-[#3b82f6] text-white transition-colors duration-300;
+}
+
+/* Global solid buttons */
+button.primary {
+  @apply w-full bg-[#2563eb] hover:bg-[#3b82f6] text-white font-black py-4 rounded-2xl uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20;
+}

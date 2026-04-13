@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  # MongoDB service
+  mongodb:
+    image: mongo:7
+    container_name: elite_clinic_db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend service
+  backend:
+    build: ./server
+    container_name: elite_clinic_backend
+    environment:
+      MONGO_URI: mongodb://admin:admin123@mongodb:27017/clinic
+      JWT_SECRET: your_jwt_secret_here
+      PORT: 5001
+      FRONTEND_URL: http://localhost:5177
+    ports:
+      - "5001:5001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/test-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Frontend service
+  frontend:
+    build: ./client
+    container_name: elite_clinic_frontend
+    environment:
+      VITE_API_URL: http://localhost:5001
+    ports:
+      - "5177:5177"
+    depends_on:
+      - backend
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+
+volumes:
+  mongo_data:

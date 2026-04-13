@@ -1,0 +1,85 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Backend Tests
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install backend dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Run backend tests
+        working-directory: ./server
+        run: npm test
+
+      - name: Run ESLint on backend
+        working-directory: ./server
+        run: npm run lint || true
+
+      # Frontend Tests
+      - name: Install frontend dependencies
+        working-directory: ./client
+        run: npm ci
+
+      - name: Run frontend build
+        working-directory: ./client
+        run: npm run build
+
+      - name: Run ESLint on frontend
+        working-directory: ./client
+        run: npm run lint || true
+
+  docker-build:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build backend Docker image
+        working-directory: ./server
+        run: docker build -t elite-clinic-backend:latest .
+
+      - name: Build frontend Docker image
+        working-directory: ./client
+        run: docker build -t elite-clinic-frontend:latest .
+
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run npm audit
+        run: |
+          cd server && npm audit --production || true
+          cd ../client && npm audit --production || true
+
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "Elite Clinic"
+          path: "."
+          format: "JSON"
