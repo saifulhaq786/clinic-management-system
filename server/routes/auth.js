@@ -2,11 +2,37 @@ const router = require('express').Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const auth = require('../middleware/auth');
 const { sendVerificationEmail, sendWelcomeEmail } = require('../config/smsEmail');
 
 // Use consistent JWT secret
 const SECRET = process.env.JWT_SECRET || "elite_clinic_super_secret_key_2026";
+const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
+
+const isPhonePlaceholderEmail = (email = '') => email.endsWith('@phone.local');
+
+const sanitizeUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  phone: user.phone,
+  age: user.age,
+  gender: user.gender,
+  bloodGroup: user.bloodGroup,
+  specialty: user.specialty,
+  bio: user.bio,
+  location: user.location,
+  isVerified: user.isVerified,
+  avatar: user.avatar
+});
+
+const createAuthToken = (user) => jwt.sign(
+  { id: user._id, role: user.role, email: user.email, phone: user.phone },
+  SECRET,
+  { expiresIn: '7d' }
+);
 
 // @route   POST api/auth/register
 router.post('/register', async (req, res) => {
@@ -122,30 +148,10 @@ router.post('/login', async (req, res) => {
     }
     
     // Generate token using CONSISTENT secret
-    const token = jwt.sign(
-      { id: user._id, role: user.role, email: user.email }, 
-      SECRET, 
-      { expiresIn: '7d' }
-    );
+    const token = createAuthToken(user);
 
     console.log(`✅ User logged in: ${normalizedEmail}`);
-    res.json({ 
-      token, 
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email,
-        role: user.role, 
-        phone: user.phone, 
-        age: user.age, 
-        gender: user.gender, 
-        bloodGroup: user.bloodGroup, 
-        specialty: user.specialty, 
-        bio: user.bio,
-        location: user.location,
-        isVerified: user.isVerified
-      } 
-    });
+    res.json({ token, user: sanitizeUser(user) });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Server error during login. Please try again." });
@@ -156,57 +162,120 @@ router.post('/login', async (req, res) => {
 // @desc    Google OAuth login
 router.post('/google', async (req, res) => {
   try {
-    const { name, email, googleId, picture } = req.body;
+    const { credential, role, location } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ error: "Email is required" });
+    if (!googleClient || !process.env.GOOGLE_CLIENT_ID) {
+      return res.status(503).json({ error: "Google sign-in is not configured on the server." });
     }
 
-    // Normalize email
-    const normalizedEmail = email.toLowerCase().trim();
+    if (!credential) {
+      return res.status(400).json({ error: "Google credential is required" });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    const payload = ticket.getPayload();
+
+    if (!payload?.email || !payload.email_verified) {
+      return res.status(401).json({ error: "Google account email could not be verified." });
+    }
+
+    const normalizedEmail = payload.email.toLowerCase().trim();
+    const googleId = payload.sub;
+    const name = payload.name || normalizedEmail.split('@')[0];
+    const picture = payload.picture || null;
 
     let user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
-      // Create new user from Google data
       user = new User({
-        name: name || normalizedEmail.split('@')[0],
+        name,
         email: normalizedEmail,
         googleId,
-        password: "google_oauth_user", // Placeholder for OAuth users
-        role: 'patient', // Default role
+        password: `google_oauth_${googleId}`,
+        role: role === 'doctor' ? 'doctor' : 'patient',
         isVerified: true,
+        emailVerificationRequired: false,
         avatar: picture,
-        location: { type: 'Point', coordinates: [0, 0] }
+        location: location?.type === 'Point' ? location : { type: 'Point', coordinates: [0, 0] }
       });
       await user.save();
-    } else if (!user.googleId) {
-      // Link Google account to existing user
+    } else {
       user.googleId = googleId;
+      user.avatar = picture || user.avatar;
+      user.isVerified = true;
+      user.emailVerificationRequired = false;
+      if (isPhonePlaceholderEmail(user.email)) {
+        user.email = normalizedEmail;
+      }
       await user.save();
     }
 
-    // Generate token
-    const token = jwt.sign(
-      { id: user._id, role: user.role, email: user.email },
-      SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = createAuthToken(user);
 
     res.json({
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: picture,
-        isVerified: user.isVerified
-      }
+      user: sanitizeUser(user)
     });
   } catch (err) {
     console.error("Google auth error:", err);
     res.status(500).json({ error: "Google authentication failed" });
+  }
+});
+
+// @route   POST api/auth/link-email
+// @desc    Convert a phone-only account into a full email/password account
+router.post('/link-email', auth, async (req, res) => {
+  try {
+    const { name, email, password, role, specialty, location } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters." });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    if (!user.phone) {
+      return res.status(400).json({ error: "This account is already using an email login." });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: normalizedEmail, _id: { $ne: user._id } });
+    if (existingUser) {
+      return res.status(400).json({ error: "That email is already linked to another account." });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.name = name?.trim() || user.name;
+    user.email = normalizedEmail;
+    user.password = await bcrypt.hash(password, salt);
+    user.role = role === 'doctor' ? 'doctor' : user.role;
+    user.specialty = specialty || user.specialty;
+    user.isVerified = true;
+    user.emailVerificationRequired = false;
+    if (location?.type === 'Point') {
+      user.location = location;
+    }
+    await user.save();
+
+    const token = createAuthToken(user);
+    res.json({
+      message: "Email login added successfully.",
+      token,
+      user: sanitizeUser(user)
+    });
+  } catch (err) {
+    console.error("Link email error:", err);
+    res.status(500).json({ error: "Failed to add email login to this account." });
   }
 });
 
@@ -247,21 +316,11 @@ router.post('/guest', async (req, res) => {
       await user.save();
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role, email: user.email },
-      SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = createAuthToken(user);
 
     res.json({
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isVerified: user.isVerified
-      },
+      user: sanitizeUser(user),
       message: `✅ Logged in as test ${userType}`
     });
   } catch (err) {
@@ -396,22 +455,12 @@ router.post('/verify-email-code', async (req, res) => {
     await sendWelcomeEmail(normalizedEmail, user.name);
 
     // Generate token after verification
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = createAuthToken(user);
 
     res.json({
       message: "Email verified successfully!",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isVerified: user.isVerified
-      }
+      user: sanitizeUser(user)
     });
   } catch (err) {
     console.error("Verify email code error:", err.message);

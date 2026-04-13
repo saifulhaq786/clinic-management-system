@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import api from './api';
 
 export default function EmailVerificationModal({ email, onVerified }) {
   const [verificationCode, setVerificationCode] = useState('');
@@ -21,7 +21,7 @@ export default function EmailVerificationModal({ email, onVerified }) {
         return;
       }
 
-      const res = await axios.post('http://localhost:5001/api/auth/verify-email-code', {
+      const res = await api.post('/api/auth/verify-email-code', {
         email,
         code: verificationCode
       });
@@ -52,7 +52,7 @@ export default function EmailVerificationModal({ email, onVerified }) {
     setError('');
 
     try {
-      const res = await axios.post('http://localhost:5001/api/auth/resend-email-verification', {
+      const res = await api.post('/api/auth/send-email-verification', {
         email
       });
 

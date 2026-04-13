@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Edit3, Save, X, Phone, Droplet, Activity, FileText } from 'lucide-react';
 import MedicalVault from './components/MedicalVault';
 import PrescriptionUpload from './components/PrescriptionUpload';
+import api from './api';
+import { isPhoneOnlyAccount } from './authSession';
 
 export default function Profile() {
   const [appointments, setAppointments] = useState([]);
@@ -36,7 +37,7 @@ export default function Profile() {
 
     const fetchAppointments = async () => {
       try {
-        const res = await axios.get('http://localhost:5001/api/appointments/list', {
+        const res = await api.get('/api/appointments/list', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setAppointments(user.role === 'doctor' ? res.data : res.data.filter(apt => apt.status === 'completed'));
@@ -49,7 +50,7 @@ export default function Profile() {
 
   const handleUpdateProfile = async () => {
     try {
-      const res = await axios.patch('http://localhost:5001/api/auth/update', editForm, {
+      const res = await api.patch('/api/auth/update', editForm, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const updatedUser = { ...user, ...res.data };
@@ -218,6 +219,21 @@ export default function Profile() {
                   </>
                 )}
               </div>
+
+              {isPhoneOnlyAccount(user) && (
+                <div className="mt-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-100/80">Upgrade Account</p>
+                  <p className="mt-2 text-sm leading-6 text-cyan-50">
+                    This profile currently signs in with phone OTP only. Add an email and password for easier access and Google linking.
+                  </p>
+                  <button
+                    onClick={() => navigate('/signup')}
+                    className="mt-4 rounded-xl bg-cyan-300 px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-slate-950 transition hover:brightness-110"
+                  >
+                    Add Email Login
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -255,7 +271,7 @@ export default function Profile() {
                     <PrescriptionUpload 
                       appointmentId={apt._id}
                       onSave={() => {
-                        axios.get('http://localhost:5001/api/appointments/list', {
+                        api.get('/api/appointments/list', {
                           headers: { Authorization: `Bearer ${token}` }
                         }).then(r => setAppointments(r.data)).catch(e => console.error(e));
                       }}

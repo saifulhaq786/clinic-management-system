@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Card, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Users, DollarSign, Calendar, TrendingUp, Activity } from 'lucide-react';
-
+import api from './api';
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [topDoctors, setTopDoctors] = useState([]);
@@ -16,17 +15,17 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const statsRes = await axios.get('http://localhost:5001/api/admin/stats', {
+      const statsRes = await api.get('/api/admin/stats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setStats(statsRes.data);
 
-      const doctorsRes = await axios.get('http://localhost:5001/api/admin/top-doctors', {
+      const doctorsRes = await api.get('/api/admin/top-doctors', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTopDoctors(doctorsRes.data);
 
-      const usersRes = await axios.get('http://localhost:5001/api/admin/users', {
+      const usersRes = await api.get('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(usersRes.data);

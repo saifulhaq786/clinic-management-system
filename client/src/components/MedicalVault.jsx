@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, Calendar, Stethoscope } from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
 
 export default function MedicalVault() {
   const [vault, setVault] = useState([]);
@@ -14,7 +14,7 @@ export default function MedicalVault() {
 
   const fetchVault = async () => {
     try {
-      const res = await axios.get('http://localhost:5001/api/appointments/list', {
+      const res = await api.get('/api/appointments/list', {
         headers: { Authorization: `Bearer ${token}` }
       });
 

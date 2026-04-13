@@ -8,6 +8,22 @@ const auth = require('../middleware/auth');
 
 const SECRET = process.env.JWT_SECRET || "elite_clinic_super_secret_key_2026";
 
+const sanitizeUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  role: user.role,
+  age: user.age,
+  gender: user.gender,
+  bloodGroup: user.bloodGroup,
+  specialty: user.specialty,
+  bio: user.bio,
+  location: user.location,
+  isVerified: user.isVerified,
+  avatar: user.avatar
+});
+
 // Validation helper
 const normalizePhoneNumber = (phone) => {
   // Remove all non-digit characters
@@ -42,24 +58,24 @@ router.post('/send-otp', async (req, res) => {
       return res.status(400).json({ error: "Invalid phone number format" });
     }
     
-    // Generate and store OTP
-    const otp = generateOTP();
-    storeOTP(normalizedPhone, otp);
-    
     // Try to send real SMS via Twilio
+    const otp = generateOTP();
     const smsResult = await sendOTP_SMS(normalizedPhone, otp);
     
     if (!smsResult.success) {
       console.warn(`⚠️  [SMS FAILED] Could not send actual SMS to ${normalizedPhone}`);
       console.warn('Reason: Check Twilio credentials and phone number compatibility');
+      return res.status(503).json({
+        error: "SMS service is unavailable right now. Please try again after Twilio is configured."
+      });
     }
 
+    storeOTP(normalizedPhone, otp);
+
     const responseData = {
-      message: smsResult.success 
-        ? "✅ OTP sent successfully. Valid for 5 minutes."
-        : "⚠️  SMS service unavailable. Please try email verification instead.",
+      message: "✅ OTP sent successfully. Valid for 5 minutes.",
       phoneNumber: normalizedPhone,
-      smsSent: smsResult.success
+      smsSent: true
     };
     
     console.log('📍 [MOBILE/SEND-OTP] Sending response:', responseData);
@@ -133,14 +149,7 @@ router.post('/verify-otp', async (req, res) => {
     console.log(`✅ User logged in via phone: ${normalizedPhone}`);
     res.json({
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        isVerified: user.isVerified
-      }
+      user: sanitizeUser(user)
     });
   } catch (err) {
     console.error("Verify OTP error:", err.message);

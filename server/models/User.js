@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['patient', 'doctor'], default: 'patient' },
   
   // --- NEW MEDICAL & CONTACT DETAILS ---
-  phone: { type: String, default: '', sparse: true, unique: true },
+  phone: { type: String, default: undefined, sparse: true, unique: true },
   age: { type: Number, default: null },
   gender: { type: String, enum: ['Male', 'Female', 'Other', 'Not Specified'], default: 'Not Specified' },
   bloodGroup: { type: String, default: '' },
@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema({
   
   // Auth & Verification
   isVerified: { type: Boolean, default: false },
+  emailVerificationRequired: { type: Boolean, default: false },
   googleId: { type: String, default: null },
   avatar: { type: String, default: null },
   
@@ -37,5 +38,6 @@ const userSchema = new mongoose.Schema({
 
 userSchema.index({ location: "2dsphere" });
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ phone: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('User', userSchema);

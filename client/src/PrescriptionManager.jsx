@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { FileText, Download, AlertCircle } from 'lucide-react';
+import api from './api';
 
 export default function PrescriptionManager() {
   const [prescriptions, setPrescriptions] = useState([]);
@@ -15,7 +15,7 @@ export default function PrescriptionManager() {
   const fetchPrescriptions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5001/api/prescriptions/list', {
+      const res = await api.get('/api/prescriptions/list', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPrescriptions(res.data);
@@ -27,7 +27,7 @@ export default function PrescriptionManager() {
 
   const handleCreatePrescription = async () => {
     try {
-      await axios.post('http://localhost:5001/api/prescriptions/create', newPrescription, {
+      await api.post('/api/prescriptions/create', newPrescription, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert('✅ Prescription created successfully!');
@@ -44,7 +44,7 @@ export default function PrescriptionManager() {
 
   const handleDownloadPrescription = async (prescriptionId) => {
     try {
-      const res = await axios.get(`http://localhost:5001/api/prescriptions/download/${prescriptionId}`, {
+      const res = await api.get(`/api/prescriptions/download/${prescriptionId}`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob',
       });

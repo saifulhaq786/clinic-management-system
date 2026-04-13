@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { User, X } from 'lucide-react';
+import api from './api';
 
 export default function ProfileCompletionModal({ isOpen, onClose, userData, onProfileComplete }) {
   const [name, setName] = useState(userData?.name || '');
@@ -23,8 +23,8 @@ export default function ProfileCompletionModal({ isOpen, onClose, userData, onPr
       }
 
       const token = localStorage.getItem('token');
-      const res = await axios.put(
-        'http://localhost:5001/api/profile/complete',
+      const res = await api.put(
+        '/api/profile/complete',
         {
           name: name.trim(),
           age: parseInt(age),

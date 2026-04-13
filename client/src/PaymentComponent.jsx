@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { CreditCard, DollarSign, CheckCircle } from 'lucide-react';
+import api from './api';
 
 export default function PaymentComponent() {
   const [amount, setAmount] = useState('');
@@ -17,8 +17,8 @@ export default function PaymentComponent() {
 
     setLoading(true);
     try {
-      const res = await axios.post(
-        'http://localhost:5001/api/payments/intent',
+      const res = await api.post(
+        '/api/payments/intent',
         { appointmentId, amount: parseFloat(amount) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -27,8 +27,8 @@ export default function PaymentComponent() {
       alert(`✅ Payment Intent Created!\nClient Secret: ${res.data.clientSecret}`);
 
       // Confirm payment
-      await axios.post(
-        'http://localhost:5001/api/payments/confirm',
+      await api.post(
+        '/api/payments/confirm',
         { transactionId: res.data.transactionId },
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -59,21 +59,24 @@ mongoose.connect(process.env.MONGO_URI)
   })
   .catch(err => console.error("❌ DB Connection Error:", err.message));
 
-// Function to fix duplicate emails in database
+// Function to normalize auth data and recreate important indexes
 async function cleanupDuplicateEmails() {
   try {
     const User = require('./models/User');
     
     console.log("🔍 Starting email normalization...");
     
-    // First, normalize all emails to lowercase
+    // Normalize emails and remove empty-string phone placeholders.
     const users = await User.find({});
     for (const user of users) {
       if (user.email !== user.email.toLowerCase()) {
         user.email = user.email.toLowerCase().trim();
-        await user.save();
-        console.log(`✓ Normalized: ${user.email}`);
       }
+      if (user.phone === '') {
+        user.phone = undefined;
+      }
+      await user.save();
+      console.log(`✓ Normalized user: ${user.email}`);
     }
 
     // Drop all indexes
@@ -116,6 +119,7 @@ async function cleanupDuplicateEmails() {
 
     // Recreate indexes properly with sparse and unique
     await User.collection.createIndex({ email: 1 }, { unique: true, sparse: true });
+    await User.collection.createIndex({ phone: 1 }, { unique: true, sparse: true });
     await User.collection.createIndex({ location: '2dsphere' });
     console.log("✅ Indexes recreated with proper constraints");
   } catch (err) {

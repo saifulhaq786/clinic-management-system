@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Activity, LogOut, Check, X, FileText, Clock, Users, Calendar, Briefcase, ChevronRight, Sparkles } from 'lucide-react';
 import DoctorModal from './components/DoctorModal';
 import MedicalChatBot from './components/MedicalChatBot';
 import ProfileCompletionModal from './ProfileCompletionModal';
+import api from './api';
 
 export default function Dashboard() {
   const [appointments, setAppointments] = useState([]);
@@ -36,14 +36,14 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const aptRes = await axios.get('http://localhost:5001/api/appointments/list', { 
+      const aptRes = await api.get('/api/appointments/list', { 
         headers: { Authorization: `Bearer ${token}` } 
       });
       setAppointments(aptRes.data.filter(a => a.status !== 'completed'));
 
       // Get next appointment for patient
       if (user?.role === 'patient') {
-        const nextRes = await axios.get(`http://localhost:5001/api/appointments/upcoming/${user.id}`, {
+        const nextRes = await api.get(`/api/appointments/upcoming/${user.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (nextRes.data && nextRes.data._id) {
@@ -53,7 +53,7 @@ export default function Dashboard() {
 
       if (user?.role === 'patient' && user?.location?.coordinates) {
         const [lng, lat] = user.location.coordinates;
-        const clRes = await axios.get(`http://localhost:5001/api/appointments/nearby?lng=${lng}&lat=${lat}`, { 
+        const clRes = await api.get(`/api/appointments/nearby?lng=${lng}&lat=${lat}`, { 
           headers: { Authorization: `Bearer ${token}` } 
         });
         setClinics(clRes.data);
@@ -69,7 +69,7 @@ export default function Dashboard() {
 
   const updateStatus = async (id, status) => {
     try {
-      await axios.patch(`http://localhost:5001/api/appointments/${id}`, { status }, { 
+      await api.patch(`/api/appointments/${id}`, { status }, { 
         headers: { Authorization: `Bearer ${token}` } 
       });
       fetchData();

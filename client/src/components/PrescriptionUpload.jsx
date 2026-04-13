@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, FileText, Save } from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
 
 export default function PrescriptionUpload({ appointmentId, onSave }) {
   const [prescription, setPrescription] = useState('');
@@ -27,8 +27,8 @@ export default function PrescriptionUpload({ appointmentId, onSave }) {
         formData.append('prescriptionFiles[]', f.file);
       });
 
-      const res = await axios.patch(
-        `http://localhost:5001/api/appointments/${appointmentId}`,
+      const res = await api.patch(
+        `/api/appointments/${appointmentId}`,
         {
           prescription,
           doctorNotes,

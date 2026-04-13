@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, X, Minimize2, Maximize2, Loader, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
 
 export default function MedicalChatBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -36,8 +36,8 @@ export default function MedicalChatBot() {
     setLoading(true);
 
     try {
-      const res = await axios.post(
-        'http://localhost:5001/api/chat/medical',
+      const res = await api.post(
+        '/api/chat/medical',
         { query: input },
         { headers: { Authorization: `Bearer ${token}` } }
       );

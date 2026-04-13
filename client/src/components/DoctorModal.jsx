@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Star, MapPin, Clock, Users, Briefcase, Calendar } from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
 
 export default function DoctorModal({ doctor, onClose, onBook }) {
   const [selectedDate, setSelectedDate] = useState('');
@@ -17,8 +17,8 @@ export default function DoctorModal({ doctor, onClose, onBook }) {
     setLoading(true);
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      await axios.post(
-        'http://localhost:5001/api/appointments/book',
+      await api.post(
+        '/api/appointments/book',
         {
           doctorId: doctor._id,
           doctorName: doctor.name,

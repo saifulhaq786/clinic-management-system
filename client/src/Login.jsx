@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowRight, LogIn } from 'lucide-react';
+import { ChevronRight, LogIn, ShieldCheck } from 'lucide-react';
+import api from './api';
+import AuthShell from './components/AuthShell';
+import GoogleAuthButton from './components/GoogleAuthButton';
+import EmailVerificationModal from './EmailVerificationModal';
+import { persistSession } from './authSession';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -16,11 +21,14 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      const res = await axios.post('http://localhost:5001/api/auth/login', { email, password });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      const res = await api.post('/api/auth/login', { email, password });
+      persistSession(res.data);
       navigate('/dashboard');
     } catch (err) {
+      if (err.response?.data?.requiresVerification) {
+        setVerificationEmail(err.response.data.email || email);
+        setShowVerificationModal(true);
+      }
       setError(err.response?.data?.message || "Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
@@ -28,105 +36,95 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#050810] via-[#0f172a] to-[#1e3a8a]/20 flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-1/3 w-72 h-72 bg-[#2563eb]/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-[#1e40af]/10 rounded-full blur-3xl"></div>
+    <AuthShell
+      eyebrow="Secure Sign In"
+      title="Access a refined clinical workspace built for trust."
+      description="Sign in to continue managing appointments, records, conversations, and billing in one premium care platform."
+    >
+      <div className="mb-8 flex items-center gap-3">
+        <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-cyan-100">
+          <ShieldCheck size={20} />
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-100/80">Welcome Back</p>
+          <h2 className="mt-1 text-3xl font-semibold text-white">Sign in to Elite Clinic</h2>
+        </div>
       </div>
 
-      <form onSubmit={handleLogin} className="relative w-full max-w-md">
-        {/* Premium Glass Card */}
-        <div className="bg-[#0f172a]/80 backdrop-blur-xl border border-[#1e293b]/50 rounded-3xl p-8 md:p-10 shadow-2xl">
-          
-          {/* Logo Section */}
-          <div className="flex justify-center mb-8">
-            <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#1e40af] flex items-center justify-center shadow-xl shadow-blue-600/30">
-              <Shield size={40} className="text-white" />
-              <div className="absolute inset-0 rounded-2xl bg-white/5"></div>
-            </div>
-          </div>
-
-          {/* Header Text */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] mb-2 tracking-tight">Elite Clinic</h1>
-            <p className="text-[#94a3b8] text-sm font-semibold">Professional Healthcare Management</p>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-900/20 border border-red-900/30 rounded-2xl flex items-start gap-3">
-              <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
-              <p className="text-red-400 text-sm font-semibold">{error}</p>
-            </div>
-          )}
-
-          {/* Form Fields */}
-          <div className="space-y-5 mb-8">
-            <div className="relative group">
-              <input 
-                type="email" 
-                placeholder="Email Address" 
-                value={email}
-                onChange={e => setEmail(e.target.value)} 
-                className="w-full bg-[#1e293b]/30 border border-[#334155]/50 hover:border-[#334155] focus:border-[#3b82f6] p-4 rounded-2xl text-white placeholder-[#64748b] outline-none transition-all duration-300 font-medium"
-                required 
-              />
-            </div>
-
-            <div className="relative group">
-              <input 
-                type={showPassword ? "text" : "password"} 
-                placeholder="Password" 
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full bg-[#1e293b]/30 border border-[#334155]/50 hover:border-[#334155] focus:border-[#3b82f6] p-4 rounded-2xl text-white placeholder-[#64748b] outline-none transition-all duration-300 font-medium pr-12"
-                required 
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#3b82f6] transition"
-              >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
-            </div>
-          </div>
-
-          {/* Regular Login Button */}
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-[#3b82f6] to-[#2563eb] hover:from-[#2563eb] hover:to-[#1e40af] text-white font-black py-3 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 mb-4"
-          >
-            {loading ? (
-              <span className="animate-spin">⏳</span>
-            ) : (
-              <>
-                <LogIn size={18} />
-                Sign In
-              </>
-            )}
-          </button>
-
-          {/* Signup Link */}
-          <div className="text-center">
-            <p className="text-[#64748b] text-sm">Don't have an account? 
-              <a href="/signup" className="text-[#3b82f6] hover:text-[#60a5fa] font-bold ml-1 transition">Create one</a>
-            </p>
-          </div>
-
-          {/* Mobile Login Option */}
-          <div className="mt-4 pt-4 border-t border-[#334155]/30 text-center">
-            <p className="text-[#64748b] text-xs mb-2 font-semibold">Or login with phone number</p>
-            <a href="/mobile-login" className="inline-block text-[#3b82f6] hover:text-[#60a5fa] font-bold text-sm transition">
-              📱 Phone Login with OTP →
-            </a>
-          </div>
-
-
+      {error && (
+        <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-100">
+          {error}
         </div>
+      )}
+
+      <form onSubmit={handleLogin} className="space-y-5">
+        <div className="space-y-2">
+          <label className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Email</label>
+          <input
+            type="email"
+            placeholder="name@eliteclinic.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white placeholder:text-slate-500 focus:border-cyan-300"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Password</label>
+          <input
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white placeholder:text-slate-500 focus:border-cyan-300"
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-sky-500 px-6 py-4 text-sm font-semibold uppercase tracking-[0.25em] text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? 'Signing In...' : <><LogIn size={18} /> Sign In</>}
+        </button>
       </form>
-    </div>
+
+      <div className="mt-6">
+        <GoogleAuthButton setError={setError} />
+      </div>
+
+      <div className="mt-8 space-y-4 text-sm text-slate-300">
+        <button
+          type="button"
+          onClick={() => navigate('/mobile-login')}
+          className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-left transition hover:border-cyan-300/40 hover:bg-white/10"
+        >
+          <span>
+            <span className="block font-semibold text-white">Use mobile OTP instead</span>
+            <span className="block text-slate-400">Access your account with verified phone delivery.</span>
+          </span>
+          <ChevronRight size={18} className="text-cyan-100" />
+        </button>
+
+        <p className="text-center text-slate-400">
+          New to Elite Clinic?{' '}
+          <button type="button" onClick={() => navigate('/signup')} className="font-semibold text-cyan-100 transition hover:text-white">
+            Create an account
+          </button>
+        </p>
+      </div>
+
+      {showVerificationModal && (
+        <EmailVerificationModal
+          email={verificationEmail}
+          onVerified={() => {
+            setShowVerificationModal(false);
+            navigate('/dashboard');
+          }}
+        />
+      )}
+    </AuthShell>
   );
 }
