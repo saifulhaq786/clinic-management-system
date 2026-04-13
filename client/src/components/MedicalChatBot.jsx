@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Minimize2, Maximize2, Loader, AlertCircle } from 'lucide-react';
+import { MessageCircle, Send, X, Minimize2, Maximize2, AlertCircle } from 'lucide-react';
 import api from '../api';
 
 export default function MedicalChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState([
-    { id: 1, text: "👋 Hello! I'm your AI Medical Assistant. I can help answer general medical questions about symptoms, health conditions, and wellness tips. How can I help you today?", sender: 'bot', timestamp: new Date() }
+    { id: 1, text: "Hello! I'm your AI Medical Assistant. I can help answer general medical questions about symptoms, health conditions, and wellness tips. How can I help you today?", sender: 'bot', timestamp: new Date() }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,6 @@ export default function MedicalChatBot() {
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    // Add user message
     const userMessage = {
       id: messages.length + 1,
       text: input,
@@ -52,7 +51,7 @@ export default function MedicalChatBot() {
     } catch (err) {
       const errorMessage = {
         id: messages.length + 2,
-        text: "⚠️ I encountered an error. Please try again or consult a healthcare professional for personalized advice.",
+        text: "I encountered an error. Please try again or consult a healthcare professional for personalized advice.",
         sender: 'bot',
         timestamp: new Date()
       };
@@ -64,14 +63,14 @@ export default function MedicalChatBot() {
 
   return (
     <>
-      {/* Floating Chat Button */}
+      {/* FAB */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-16 h-16 bg-gradient-to-br from-[#2563eb] to-[#1e40af] text-white rounded-full shadow-xl shadow-blue-600/40 hover:shadow-2xl hover:shadow-blue-600/60 transition-all flex items-center justify-center z-40 animate-pulse hover:animate-bounce group"
+          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-2xl shadow-xl shadow-teal-500/20 hover:shadow-teal-500/40 transition-all flex items-center justify-center z-40 animate-pulse-glow group"
           title="Open Medical Chatbot"
         >
-          <MessageCircle size={28} className="group-hover:scale-110 transition-transform" />
+          <MessageCircle size={24} className="group-hover:scale-110 transition-transform" />
         </button>
       )}
 
@@ -79,58 +78,58 @@ export default function MedicalChatBot() {
       {isOpen && (
         <div className={`fixed z-50 transition-all duration-300 ${
           isMinimized 
-            ? 'w-80 h-20' 
-            : 'w-full md:w-96 h-screen md:h-[600px]'
+            ? 'w-72 h-16' 
+            : 'w-full md:w-[380px] h-screen md:h-[560px]'
         } ${
           isMinimized
             ? 'bottom-6 right-6 md:bottom-8 md:right-8'
             : 'inset-x-0 md:inset-x-auto bottom-0 md:bottom-6 md:right-6 md:top-auto'
-        } md:rounded-3xl rounded-none md:rounded-b-none md:rounded-t-3xl overflow-hidden bg-gradient-to-br from-[#0f172a] to-[#1a1f35] border border-[#1e293b]/50 shadow-2xl flex flex-col backdrop-blur-xl`}>
+        } md:rounded-2xl rounded-none overflow-hidden bg-[#0c1222] border border-white/[0.06] shadow-2xl shadow-black/40 flex flex-col`}>
           
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#2563eb] via-[#1e40af] to-[#1e40af] px-6 py-4 md:py-5 flex items-center justify-between flex-shrink-0">
+          <div className="bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-4 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/15 backdrop-blur rounded-xl flex items-center justify-center flex-shrink-0">
-                <MessageCircle size={20} className="text-white" />
+              <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <MessageCircle size={18} className="text-white" />
               </div>
-              <div className="hidden md:block">
-                <h3 className="text-white font-black uppercase text-sm tracking-tight">Elite Medical AI</h3>
-                <p className="text-blue-100 text-xs font-semibold">24/7 Medical Assistant</p>
-              </div>
+              {!isMinimized && (
+                <div>
+                  <h3 className="text-white font-medium text-sm">Medical Assistant</h3>
+                  <p className="text-teal-100/60 text-xs">AI-powered support</p>
+                </div>
+              )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               <button
                 onClick={() => setIsMinimized(!isMinimized)}
-                className="p-2.5 hover:bg-white/10 rounded-lg transition-all duration-300 text-white/80 hover:text-white hidden md:flex"
-                title={isMinimized ? 'Expand' : 'Minimize'}
+                className="p-2 hover:bg-white/10 rounded-lg transition text-white/60 hover:text-white hidden md:flex"
               >
-                {isMinimized ? <Maximize2 size={18} /> : <Minimize2 size={18} />}
+                {isMinimized ? <Maximize2 size={15} /> : <Minimize2 size={15} />}
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2.5 hover:bg-white/10 rounded-lg transition-all duration-300 text-white/80 hover:text-white"
-                title="Close"
+                className="p-2 hover:bg-white/10 rounded-lg transition text-white/60 hover:text-white"
               >
-                <X size={18} />
+                <X size={15} />
               </button>
             </div>
           </div>
 
-          {/* Messages Area */}
+          {/* Messages */}
           {!isMinimized && (
             <>
-              <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-4 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                     <div
-                      className={`max-w-xs px-4 py-3 rounded-2xl ${
+                      className={`max-w-[80%] px-4 py-2.5 rounded-2xl ${
                         msg.sender === 'user'
-                          ? 'bg-gradient-to-br from-[#2563eb] to-[#1e40af] text-white rounded-br-none shadow-lg shadow-blue-600/20'
-                          : 'bg-[#1e3a8a]/40 border border-[#1e3a8a]/50 text-[#cbd5e1] rounded-bl-none hover:bg-[#1e3a8a]/50 transition-all'
+                          ? 'bg-teal-500 text-white rounded-br-md'
+                          : 'bg-white/[0.04] border border-white/[0.06] text-slate-300 rounded-bl-md'
                       }`}
                     >
-                      <p className="text-sm leading-relaxed font-medium">{msg.text}</p>
-                      <span className={`text-xs ${msg.sender === 'user' ? 'text-blue-100' : 'text-[#64748b]'} mt-2 block opacity-75`}>
+                      <p className="text-sm leading-relaxed">{msg.text}</p>
+                      <span className={`text-[0.65rem] mt-1 block opacity-50 ${msg.sender === 'user' ? 'text-teal-100' : 'text-slate-500'}`}>
                         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -138,46 +137,45 @@ export default function MedicalChatBot() {
                 ))}
                 {loading && (
                   <div className="flex justify-start animate-fade-in">
-                    <div className="bg-[#1e3a8a]/40 border border-[#1e3a8a]/50 text-[#cbd5e1] px-4 py-3 rounded-2xl rounded-bl-none flex items-center gap-3">
+                    <div className="bg-white/[0.04] border border-white/[0.06] text-slate-400 px-4 py-2.5 rounded-2xl rounded-bl-md flex items-center gap-2.5">
                       <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-[#60a5fa] rounded-full animate-bounce" style={{animationDelay: '0s'}}></div>
-                        <div className="w-2 h-2 bg-[#60a5fa] rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                        <div className="w-2 h-2 bg-[#60a5fa] rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+                        <div className="w-1.5 h-1.5 bg-teal-400/60 rounded-full animate-bounce" style={{animationDelay: '0s'}} />
+                        <div className="w-1.5 h-1.5 bg-teal-400/60 rounded-full animate-bounce" style={{animationDelay: '0.15s'}} />
+                        <div className="w-1.5 h-1.5 bg-teal-400/60 rounded-full animate-bounce" style={{animationDelay: '0.3s'}} />
                       </div>
-                      <span className="text-sm font-semibold">AI is thinking...</span>
+                      <span className="text-xs">Thinking...</span>
                     </div>
                   </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Emergency Disclaimer */}
-              <div className="border-t border-[#334155]/30 bg-[#1e3a8a]/20 px-5 md:px-6 py-3 flex items-start gap-3 flex-shrink-0">
-                <AlertCircle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-[#94a3b8] font-bold leading-snug">
-                  For medical emergencies, always contact your healthcare provider or emergency services immediately.
+              {/* Disclaimer */}
+              <div className="border-t border-white/[0.04] bg-amber-500/[0.03] px-4 py-2.5 flex items-start gap-2 flex-shrink-0">
+                <AlertCircle size={13} className="text-amber-400/60 flex-shrink-0 mt-0.5" />
+                <p className="text-[0.65rem] text-slate-500 leading-snug">
+                  For medical emergencies, contact your healthcare provider or emergency services immediately.
                 </p>
               </div>
 
-              {/* Input Area */}
-              <div className="border-t border-[#334155]/30 bg-gradient-to-br from-[#050810] to-[#0f172a] px-5 md:px-6 py-4 flex-shrink-0">
-                <div className="flex gap-3 items-end">
+              {/* Input */}
+              <div className="border-t border-white/[0.04] bg-[#060b18] px-4 py-3 flex-shrink-0">
+                <div className="flex gap-2 items-end">
                   <input
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="Ask your health question..."
-                    className="flex-1 bg-[#1e293b]/50 border border-[#334155]/50 hover:border-[#334155] focus:border-[#3b82f6] text-white placeholder-[#64748b] px-4 py-3 rounded-2xl outline-none transition-all duration-300 text-sm font-medium"
+                    placeholder="Ask a health question..."
+                    className="flex-1 text-sm !py-2.5 !rounded-xl"
                     disabled={loading}
                   />
                   <button
                     onClick={handleSend}
                     disabled={loading || !input.trim()}
-                    className="bg-gradient-to-r from-[#2563eb] to-[#1e40af] hover:from-[#3b82f6] hover:to-[#2563eb] text-white p-3 rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 hover:shadow-lg hover:shadow-blue-600/30"
-                    title="Send message"
+                    className="bg-teal-500 hover:bg-teal-400 text-white p-2.5 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
                   >
-                    <Send size={18} />
+                    <Send size={16} />
                   </button>
                 </div>
               </div>
@@ -185,35 +183,6 @@ export default function MedicalChatBot() {
           )}
         </div>
       )}
-
-      <style>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-out;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #334155;
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #475569;
-        }
-      `}</style>
     </>
   );
 }

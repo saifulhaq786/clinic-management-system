@@ -33,12 +33,12 @@ export default function GoogleAuthButton({ role = 'patient', location, setError 
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-        <div className="h-px flex-1 bg-white/10" />
-        Continue With
-        <div className="h-px flex-1 bg-white/10" />
+      <div className="flex items-center gap-3 text-xs font-medium tracking-wide text-slate-500 uppercase">
+        <div className="h-px flex-1 bg-white/[0.06]" />
+        Or continue with
+        <div className="h-px flex-1 bg-white/[0.06]" />
       </div>
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white">
+      <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white">
         <div className="[&>div]:!w-full [&_iframe]:!w-full">
           <GoogleLogin
             onSuccess={handleSuccess}

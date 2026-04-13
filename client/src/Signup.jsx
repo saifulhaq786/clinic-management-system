@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronLeft, MailPlus, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, MailPlus, ShieldCheck, MapPin } from 'lucide-react';
 import EmailVerificationModal from './EmailVerificationModal';
 import api from './api';
 import AuthShell from './components/AuthShell';
@@ -75,101 +75,120 @@ export default function Signup() {
   return (
     <AuthShell
       eyebrow={phoneUpgradeMode ? "Complete Your Account" : "Create Account"}
-      title={phoneUpgradeMode ? "Add a secure email login to your phone account." : "Create an account that feels premium from the first click."}
-      description={phoneUpgradeMode ? "You already have a verified phone-based profile. Finish setup with a professional email and password so you can sign in any way you prefer." : "Join a polished healthcare platform built for dependable coordination, privacy, and premium patient experience."}
+      title={phoneUpgradeMode ? "Add a secure email login to your phone account." : "Join a platform built for premium patient care."}
+      description={phoneUpgradeMode ? "You already have a verified phone-based profile. Finish setup with a professional email and password so you can sign in any way you prefer." : "Set up your credentials and start managing appointments, records, and communication in one place."}
     >
+      {/* Back button */}
       <button
         onClick={() => navigate('/login')}
-        className="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-300 transition hover:text-white"
+        className="mb-6 flex items-center gap-1.5 text-sm text-slate-400 transition hover:text-white"
       >
-        <ChevronLeft size={18} /> Back to Login
+        <ChevronLeft size={16} /> Back to Login
       </button>
 
+      {/* Header */}
       <div className="mb-8 flex items-center gap-3">
-        <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-cyan-100">
+        <div className="rounded-xl border border-teal-400/10 bg-teal-400/[0.06] p-3 text-teal-300">
           {phoneUpgradeMode ? <MailPlus size={20} /> : <ShieldCheck size={20} />}
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-100/80">
+          <p className="text-xs font-medium tracking-widest text-teal-300/70 uppercase">
             {phoneUpgradeMode ? 'Upgrade Access' : 'Join Elite Clinic'}
           </p>
-          <h2 className="mt-1 text-3xl font-semibold text-white">
+          <h2 className="mt-0.5 text-2xl font-semibold text-white">
             {phoneUpgradeMode ? 'Add Email & Password' : 'Create your profile'}
           </h2>
         </div>
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-100">
+        <div className="mb-6 rounded-xl border border-red-400/15 bg-red-500/[0.06] px-4 py-3 text-sm text-red-300">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSignup} className="space-y-4">
-        <input
-          placeholder="Full Name"
-          value={form.name}
-          onChange={e => setForm({...form, name: e.target.value})}
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white placeholder:text-slate-500 focus:border-cyan-300"
-          required
-        />
+      {/* Form */}
+      <form onSubmit={handleSignup} className="space-y-3.5">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Full Name</label>
+          <input
+            placeholder="John Doe"
+            value={form.name}
+            onChange={e => setForm({...form, name: e.target.value})}
+            required
+          />
+        </div>
 
-        <input
-          type="email"
-          placeholder="Professional email address"
-          value={form.email}
-          onChange={e => setForm({...form, email: e.target.value})}
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white placeholder:text-slate-500 focus:border-cyan-300"
-          required
-        />
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Email Address</label>
+          <input
+            type="email"
+            placeholder="you@example.com"
+            value={form.email}
+            onChange={e => setForm({...form, email: e.target.value})}
+            required
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder={phoneUpgradeMode ? 'Create a password for email login' : 'Create a password'}
-          value={form.password}
-          onChange={e => setForm({...form, password: e.target.value})}
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white placeholder:text-slate-500 focus:border-cyan-300"
-          required
-        />
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Password</label>
+          <input
+            type="password"
+            placeholder={phoneUpgradeMode ? 'Create a password for email login' : 'Minimum 6 characters'}
+            value={form.password}
+            onChange={e => setForm({...form, password: e.target.value})}
+            required
+          />
+        </div>
 
-        <select
-          value={form.role}
-          onChange={e => setForm({...form, role: e.target.value})}
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white focus:border-cyan-300"
-        >
-          <option value="patient">I am a Patient</option>
-          <option value="doctor">I am a Healthcare Professional</option>
-        </select>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Account Type</label>
+          <select
+            value={form.role}
+            onChange={e => setForm({...form, role: e.target.value})}
+          >
+            <option value="patient">I am a Patient</option>
+            <option value="doctor">I am a Healthcare Professional</option>
+          </select>
+        </div>
 
         {form.role === 'doctor' && (
-          <input
-            placeholder="Medical specialty"
-            value={form.specialty}
-            onChange={e => setForm({...form, specialty: e.target.value})}
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white placeholder:text-slate-500 focus:border-cyan-300"
-          />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Specialty</label>
+            <input
+              placeholder="e.g. Cardiology, Dermatology"
+              value={form.specialty}
+              onChange={e => setForm({...form, specialty: e.target.value})}
+            />
+          </div>
         )}
 
-        <div className={`rounded-2xl border px-4 py-3 text-sm ${
-          coords ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-100' : 'border-amber-400/20 bg-amber-500/10 text-amber-100'
+        {/* Location status */}
+        <div className={`flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm ${
+          coords 
+            ? 'border-emerald-400/15 bg-emerald-500/[0.06] text-emerald-300' 
+            : 'border-amber-400/15 bg-amber-500/[0.06] text-amber-300'
         }`}>
-          {coords ? 'Location secured for nearby care and scheduling.' : 'Waiting for location permission so we can complete setup.'}
+          <MapPin size={15} />
+          {coords ? 'Location secured for nearby care.' : 'Awaiting location permission...'}
         </div>
 
         <button
           type="submit"
           disabled={loading || !coords}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-sky-500 px-6 py-4 text-sm font-semibold uppercase tracking-[0.25em] text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-primary mt-1"
         >
           {loading ? 'Saving...' : (
             <>
-              <CheckCircle2 size={18} />
+              <CheckCircle2 size={17} />
               {phoneUpgradeMode ? 'Add Email Login' : 'Create Account'}
             </>
           )}
         </button>
       </form>
 
+      {/* Google */}
       {!phoneUpgradeMode && (
         <div className="mt-6">
           <GoogleAuthButton
@@ -180,9 +199,9 @@ export default function Signup() {
         </div>
       )}
 
-      <div className="mt-8 text-center text-sm text-slate-400">
+      <div className="mt-8 text-center text-sm text-slate-500">
         Already have an account?{' '}
-        <button type="button" onClick={() => navigate('/login')} className="font-semibold text-cyan-100 transition hover:text-white">
+        <button type="button" onClick={() => navigate('/login')} className="font-medium text-teal-300 transition hover:text-teal-200">
           Sign in
         </button>
       </div>

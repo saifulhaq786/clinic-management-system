@@ -19,7 +19,7 @@ const limiter = rateLimit({
 });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5, // 5 login attempts
+  max: 20, // Allow full signup+verify+login flows
   skipSuccessfulRequests: true,
 });
 app.use(limiter);
@@ -36,15 +36,27 @@ const corsOptions = {
     
     // Development: Allow localhost on any port
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      callback(null, true);
-    } 
-    // Production: Use environment variable
-    else if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
-      callback(null, true);
+      return callback(null, true);
     }
-    else {
-      callback(new Error('CORS not allowed'));
+    
+    // Production: Allow Vercel, Render, and custom domains
+    const allowedPatterns = [
+      /\.vercel\.app$/,
+      /\.onrender\.com$/,
+      /\.netlify\.app$/,
+    ];
+    
+    if (allowedPatterns.some(pattern => pattern.test(origin))) {
+      return callback(null, true);
     }
+    
+    // Allow explicit FRONTEND_URL env var
+    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL.replace(/\/$/, '')) {
+      return callback(null, true);
+    }
+    
+    console.warn(`⚠️  CORS blocked origin: ${origin}`);
+    callback(new Error('CORS not allowed'));
   },
   credentials: true
 };

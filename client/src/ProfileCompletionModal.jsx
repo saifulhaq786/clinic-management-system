@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, X } from 'lucide-react';
+import { User, X, CheckCircle } from 'lucide-react';
 import api from './api';
 
 export default function ProfileCompletionModal({ isOpen, onClose, userData, onProfileComplete }) {
@@ -36,12 +36,10 @@ export default function ProfileCompletionModal({ isOpen, onClose, userData, onPr
         }
       );
 
-      // Update localStorage
       const userInStorage = JSON.parse(localStorage.getItem('user') || '{}');
       const updatedUser = { ...userInStorage, ...res.data.user };
       localStorage.setItem('user', JSON.stringify(updatedUser));
 
-      // Notify parent
       if (onProfileComplete) {
         onProfileComplete(updatedUser);
       }
@@ -49,7 +47,6 @@ export default function ProfileCompletionModal({ isOpen, onClose, userData, onPr
       onClose();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to update profile');
-      console.error('Profile update error:', err);
     } finally {
       setLoading(false);
     }
@@ -58,52 +55,45 @@ export default function ProfileCompletionModal({ isOpen, onClose, userData, onPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#0f172a]/95 border border-[#1e293b]/50 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-[#0c1222] border border-white/[0.06] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in-scale">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#2563eb] to-[#1e40af] p-6 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-              <User size={22} className="text-white" />
+            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+              <User size={20} className="text-white" />
             </div>
-            <h2 className="text-2xl font-black text-white">Complete Profile</h2>
+            <h2 className="text-xl font-semibold text-white">Complete Profile</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/20 p-2 rounded-lg transition"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-lg transition"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-lg">
-              <p className="text-red-400 text-sm font-semibold">{error}</p>
+            <div className="rounded-xl border border-red-400/15 bg-red-500/[0.06] px-4 py-3 text-sm text-red-300">
+              {error}
             </div>
           )}
 
-          {/* Full Name */}
-          <div>
-            <label className="block text-[#94a3b8] text-xs font-bold uppercase mb-2">
-              Full Name
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Full Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="John Doe"
-              className="w-full bg-[#1e293b]/50 border border-[#334155] focus:border-[#3b82f6] p-3 rounded-lg text-white placeholder-[#64748b] outline-none transition"
               required
             />
           </div>
 
-          {/* Age */}
-          <div>
-            <label className="block text-[#94a3b8] text-xs font-bold uppercase mb-2">
-              Age
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Age</label>
             <input
               type="number"
               value={age}
@@ -111,20 +101,15 @@ export default function ProfileCompletionModal({ isOpen, onClose, userData, onPr
               placeholder="30"
               min="1"
               max="120"
-              className="w-full bg-[#1e293b]/50 border border-[#334155] focus:border-[#3b82f6] p-3 rounded-lg text-white placeholder-[#64748b] outline-none transition"
               required
             />
           </div>
 
-          {/* Gender */}
-          <div>
-            <label className="block text-[#94a3b8] text-xs font-bold uppercase mb-2">
-              Gender
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Gender</label>
             <select
               value={gender}
               onChange={(e) => setGender(e.target.value)}
-              className="w-full bg-[#1e293b]/50 border border-[#334155] focus:border-[#3b82f6] p-3 rounded-lg text-white outline-none transition appearance-none cursor-pointer"
               required
             >
               <option value="Not Specified">Select Gender</option>
@@ -134,15 +119,11 @@ export default function ProfileCompletionModal({ isOpen, onClose, userData, onPr
             </select>
           </div>
 
-          {/* Blood Group */}
-          <div>
-            <label className="block text-[#94a3b8] text-xs font-bold uppercase mb-2">
-              Blood Group (Optional)
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Blood Group (Optional)</label>
             <select
               value={bloodGroup}
               onChange={(e) => setBloodGroup(e.target.value)}
-              className="w-full bg-[#1e293b]/50 border border-[#334155] focus:border-[#3b82f6] p-3 rounded-lg text-white outline-none transition appearance-none cursor-pointer"
             >
               <option value="">Not Specified</option>
               <option value="O+">O+</option>
@@ -156,26 +137,25 @@ export default function ProfileCompletionModal({ isOpen, onClose, userData, onPr
             </select>
           </div>
 
-          {/* Save Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-[#3b82f6] to-[#2563eb] hover:from-[#2563eb] hover:to-[#1e40af] text-white font-bold py-3 rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="btn-primary"
           >
             {loading ? (
               <>
-                <span className="animate-spin">⏳</span>
+                <span className="animate-spin inline-block">⏳</span>
                 Saving...
               </>
             ) : (
               <>
-                <User size={18} />
+                <CheckCircle size={17} />
                 Save Profile
               </>
             )}
           </button>
 
-          <p className="text-[#64748b] text-xs text-center">
+          <p className="text-slate-600 text-xs text-center">
             This information helps us provide better healthcare services
           </p>
         </form>

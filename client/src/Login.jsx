@@ -41,43 +41,44 @@ export default function Login() {
       title="Access a refined clinical workspace built for trust."
       description="Sign in to continue managing appointments, records, conversations, and billing in one premium care platform."
     >
+      {/* Header */}
       <div className="mb-8 flex items-center gap-3">
-        <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-cyan-100">
+        <div className="rounded-xl border border-teal-400/10 bg-teal-400/[0.06] p-3 text-teal-300">
           <ShieldCheck size={20} />
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-100/80">Welcome Back</p>
-          <h2 className="mt-1 text-3xl font-semibold text-white">Sign in to Elite Clinic</h2>
+          <p className="text-xs font-medium tracking-widest text-teal-300/70 uppercase">Welcome Back</p>
+          <h2 className="mt-0.5 text-2xl font-semibold text-white">Sign in to your account</h2>
         </div>
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-100">
+        <div className="mb-6 rounded-xl border border-red-400/15 bg-red-500/[0.06] px-4 py-3 text-sm text-red-300">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleLogin} className="space-y-5">
-        <div className="space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Email</label>
+      {/* Form */}
+      <form onSubmit={handleLogin} className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Email</label>
           <input
             type="email"
             placeholder="name@eliteclinic.com"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white placeholder:text-slate-500 focus:border-cyan-300"
             required
           />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Password</label>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Password</label>
           <input
             type="password"
             placeholder="Enter your password"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white placeholder:text-slate-500 focus:border-cyan-300"
             required
           />
         </div>
@@ -85,37 +86,40 @@ export default function Login() {
         <button
           type="submit"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-sky-500 px-6 py-4 text-sm font-semibold uppercase tracking-[0.25em] text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-primary mt-2"
         >
-          {loading ? 'Signing In...' : <><LogIn size={18} /> Sign In</>}
+          {loading ? 'Signing In...' : <><LogIn size={17} /> Sign In</>}
         </button>
       </form>
 
+      {/* Google */}
       <div className="mt-6">
         <GoogleAuthButton setError={setError} />
       </div>
 
-      <div className="mt-8 space-y-4 text-sm text-slate-300">
+      {/* Links */}
+      <div className="mt-8 space-y-4 text-sm">
         <button
           type="button"
           onClick={() => navigate('/mobile-login')}
-          className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-left transition hover:border-cyan-300/40 hover:bg-white/10"
+          className="flex w-full items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-4 text-left transition-all duration-200 hover:border-teal-400/20 hover:bg-white/[0.04]"
         >
           <span>
-            <span className="block font-semibold text-white">Use mobile OTP instead</span>
-            <span className="block text-slate-400">Access your account with verified phone delivery.</span>
+            <span className="block font-medium text-white">Sign in with mobile OTP</span>
+            <span className="block text-slate-400 text-[0.8rem] mt-0.5">Receive a one-time code on your phone.</span>
           </span>
-          <ChevronRight size={18} className="text-cyan-100" />
+          <ChevronRight size={16} className="text-teal-300/60" />
         </button>
 
-        <p className="text-center text-slate-400">
+        <p className="text-center text-slate-500">
           New to Elite Clinic?{' '}
-          <button type="button" onClick={() => navigate('/signup')} className="font-semibold text-cyan-100 transition hover:text-white">
+          <button type="button" onClick={() => navigate('/signup')} className="font-medium text-teal-300 transition hover:text-teal-200">
             Create an account
           </button>
         </p>
       </div>
 
+      {/* Email Verification Modal */}
       {showVerificationModal && (
         <EmailVerificationModal
           email={verificationEmail}

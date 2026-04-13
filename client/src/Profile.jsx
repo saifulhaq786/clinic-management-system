@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Edit3, Save, X, Phone, Droplet, Activity, FileText } from 'lucide-react';
+import { ChevronLeft, Edit3, Save, X, Activity } from 'lucide-react';
 import MedicalVault from './components/MedicalVault';
 import PrescriptionUpload from './components/PrescriptionUpload';
 import api from './api';
@@ -66,27 +66,31 @@ export default function Profile() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-[#050810] text-[#cbd5e1] p-6 lg:p-12">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-12" style={{ background: '#060b18' }}>
       <div className="max-w-5xl mx-auto">
         
         {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-6">
-          <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-[#3b82f6] font-black uppercase text-xs tracking-widest hover:text-white transition-all bg-[#1e3a8a]/20 px-4 py-2 rounded-xl border border-[#1e3a8a]/30">
-            <ChevronLeft size={16}/> Back
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+          <button 
+            onClick={() => navigate('/dashboard')} 
+            className="btn-secondary text-xs"
+          >
+            <ChevronLeft size={15} /> Back to Dashboard
           </button>
           
-          <div className="flex bg-[#0f172a] border border-[#1e293b] rounded-xl p-1 gap-1">
+          {/* Tab navigation */}
+          <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1">
             {user.role === 'doctor' ? (
               <>
                 <button 
                   onClick={() => setActiveTab('settings')}
-                  className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-[#2563eb] text-white' : 'text-[#64748b] hover:text-white'}`}
+                  className={`px-5 py-2 rounded-lg text-xs font-medium transition-all ${activeTab === 'settings' ? 'bg-teal-400/15 text-teal-300 border border-teal-400/20' : 'text-slate-500 hover:text-white border border-transparent'}`}
                 >
                   Profile
                 </button>
                 <button 
                   onClick={() => setActiveTab('patients')}
-                  className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'patients' ? 'bg-[#2563eb] text-white' : 'text-[#64748b] hover:text-white'}`}
+                  className={`px-5 py-2 rounded-lg text-xs font-medium transition-all ${activeTab === 'patients' ? 'bg-teal-400/15 text-teal-300 border border-teal-400/20' : 'text-slate-500 hover:text-white border border-transparent'}`}
                 >
                   Patients
                 </button>
@@ -95,13 +99,13 @@ export default function Profile() {
               <>
                 <button 
                   onClick={() => setActiveTab('settings')}
-                  className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-[#2563eb] text-white' : 'text-[#64748b] hover:text-white'}`}
+                  className={`px-5 py-2 rounded-lg text-xs font-medium transition-all ${activeTab === 'settings' ? 'bg-teal-400/15 text-teal-300 border border-teal-400/20' : 'text-slate-500 hover:text-white border border-transparent'}`}
                 >
                   Profile
                 </button>
                 <button 
                   onClick={() => setActiveTab('vault')}
-                  className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'vault' ? 'bg-[#2563eb] text-white' : 'text-[#64748b] hover:text-white'}`}
+                  className={`px-5 py-2 rounded-lg text-xs font-medium transition-all ${activeTab === 'vault' ? 'bg-teal-400/15 text-teal-300 border border-teal-400/20' : 'text-slate-500 hover:text-white border border-transparent'}`}
                 >
                   Medical Vault
                 </button>
@@ -110,125 +114,157 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* TAB: PROFILE SETTINGS */}
+        {/* TAB: PROFILE */}
         {activeTab === 'settings' && (
-          <div className="grid lg:grid-cols-2 gap-8">
+          <div className="grid lg:grid-cols-2 gap-6 animate-fade-in">
             
-            <div className="bg-gradient-to-br from-[#0f172a] to-[#1a1f35] border border-[#1e293b] rounded-2xl p-8">
+            {/* Edit form */}
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-6 lg:p-8">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-white text-2xl font-black uppercase">Profile</h2>
+                <h2 className="text-lg font-semibold text-white">Profile Details</h2>
                 <button 
                   onClick={() => setIsEditing(!isEditing)} 
-                  className="text-[#3b82f6] hover:text-white transition-all"
+                  className="text-slate-400 hover:text-teal-300 transition p-2 rounded-lg hover:bg-white/[0.04]"
                 >
-                  {isEditing ? <X size={20} /> : <Edit3 size={20} />}
+                  {isEditing ? <X size={18} /> : <Edit3 size={18} />}
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <input 
-                  type="text" 
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                  disabled={!isEditing}
-                  placeholder="Full Name"
-                  className="w-full bg-[#050810] border border-[#1e293b] p-3 rounded-lg text-white disabled:opacity-50 focus:border-[#3b82f6] outline-none"
-                />
-
-                <input 
-                  type="tel"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                  disabled={!isEditing}
-                  placeholder="Phone"
-                  className="w-full bg-[#050810] border border-[#1e293b] p-3 rounded-lg text-white disabled:opacity-50 focus:border-[#3b82f6] outline-none"
-                />
-
-                <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3.5">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Full Name</label>
                   <input 
-                    type="number"
-                    value={editForm.age}
-                    onChange={(e) => setEditForm({...editForm, age: e.target.value})}
+                    type="text" 
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({...editForm, name: e.target.value})}
                     disabled={!isEditing}
-                    placeholder="Age"
-                    className="bg-[#050810] border border-[#1e293b] p-3 rounded-lg text-white disabled:opacity-50 focus:border-[#3b82f6] outline-none"
+                    placeholder="Full Name"
                   />
-                  <select 
-                    value={editForm.gender}
-                    onChange={(e) => setEditForm({...editForm, gender: e.target.value})}
-                    disabled={!isEditing}
-                    className="bg-[#050810] border border-[#1e293b] p-3 rounded-lg text-white disabled:opacity-50 focus:border-[#3b82f6] outline-none"
-                  >
-                    <option>Not Specified</option>
-                    <option>Male</option>
-                    <option>Female</option>
-                    <option>Other</option>
-                  </select>
                 </div>
 
-                <input 
-                  type="text"
-                  value={editForm.bloodGroup}
-                  onChange={(e) => setEditForm({...editForm, bloodGroup: e.target.value})}
-                  disabled={!isEditing}
-                  placeholder="Blood Group"
-                  className="w-full bg-[#050810] border border-[#1e293b] p-3 rounded-lg text-white disabled:opacity-50 focus:border-[#3b82f6] outline-none"
-                />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Phone</label>
+                  <input 
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                    disabled={!isEditing}
+                    placeholder="Phone"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Age</label>
+                    <input 
+                      type="number"
+                      value={editForm.age}
+                      onChange={(e) => setEditForm({...editForm, age: e.target.value})}
+                      disabled={!isEditing}
+                      placeholder="Age"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Gender</label>
+                    <select 
+                      value={editForm.gender}
+                      onChange={(e) => setEditForm({...editForm, gender: e.target.value})}
+                      disabled={!isEditing}
+                    >
+                      <option>Not Specified</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Blood Group</label>
+                  <input 
+                    type="text"
+                    value={editForm.bloodGroup}
+                    onChange={(e) => setEditForm({...editForm, bloodGroup: e.target.value})}
+                    disabled={!isEditing}
+                    placeholder="e.g. O+, A-, B+"
+                  />
+                </div>
 
                 {user.role === 'doctor' && (
                   <>
-                    <input 
-                      type="text"
-                      value={editForm.specialty}
-                      onChange={(e) => setEditForm({...editForm, specialty: e.target.value})}
-                      disabled={!isEditing}
-                      placeholder="Specialty"
-                      className="w-full bg-[#050810] border border-[#1e293b] p-3 rounded-lg text-white disabled:opacity-50 focus:border-[#3b82f6] outline-none"
-                    />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Specialty</label>
+                      <input 
+                        type="text"
+                        value={editForm.specialty}
+                        onChange={(e) => setEditForm({...editForm, specialty: e.target.value})}
+                        disabled={!isEditing}
+                        placeholder="Specialty"
+                      />
+                    </div>
 
-                    <textarea 
-                      value={editForm.bio}
-                      onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
-                      disabled={!isEditing}
-                      placeholder="Bio"
-                      className="w-full bg-[#050810] border border-[#1e293b] p-3 rounded-lg text-white disabled:opacity-50 focus:border-[#3b82f6] outline-none resize-none h-20"
-                    />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Bio</label>
+                      <textarea 
+                        value={editForm.bio}
+                        onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
+                        disabled={!isEditing}
+                        placeholder="About you..."
+                        className="resize-none h-20"
+                      />
+                    </div>
                   </>
                 )}
 
                 {isEditing && (
                   <button 
                     onClick={handleUpdateProfile}
-                    className="w-full bg-gradient-to-r from-[#2563eb] to-[#1e40af] text-white py-3 rounded-lg font-black uppercase tracking-widest hover:shadow-lg hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
+                    className="btn-primary mt-2"
                   >
-                    <Save size={18} /> Save
+                    <Save size={16} /> Save Changes
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-[#1e3a8a]/20 to-[#1e40af]/20 border border-[#1e3a8a]/30 rounded-2xl p-8">
-              <h3 className="text-[#60a5fa] font-black uppercase text-sm mb-4">Account Info</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-[#64748b]">Email</span><span className="text-white font-bold">{user.email}</span></div>
-                <div className="flex justify-between"><span className="text-[#64748b]">Role</span><span className="text-white font-bold uppercase">{user.role}</span></div>
+            {/* Account Info */}
+            <div className="rounded-2xl border border-teal-400/10 bg-teal-400/[0.03] p-6 lg:p-8">
+              <h3 className="text-sm font-medium text-teal-300 mb-5">Account Information</h3>
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Email</span>
+                  <span className="text-white font-medium text-right truncate ml-4">{user.email}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Role</span>
+                  <span className="text-white font-medium capitalize">{user.role}</span>
+                </div>
                 {user.role === 'doctor' && (
                   <>
-                    <div className="flex justify-between"><span className="text-[#64748b]">Rating</span><span className="text-yellow-400 font-black">⭐ {user.rating || 'N/A'}</span></div>
-                    <div className="flex justify-between"><span className="text-[#64748b]">Status</span><span className="text-green-400 font-bold">🟢 Available</span></div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Rating</span>
+                      <span className="text-amber-400 font-medium">★ {user.rating || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Status</span>
+                      <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Available
+                      </span>
+                    </div>
                   </>
                 )}
               </div>
 
               {isPhoneOnlyAccount(user) && (
-                <div className="mt-6 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-5">
-                  <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-100/80">Upgrade Account</p>
-                  <p className="mt-2 text-sm leading-6 text-cyan-50">
-                    This profile currently signs in with phone OTP only. Add an email and password for easier access and Google linking.
+                <div className="mt-6 rounded-xl border border-teal-400/15 bg-teal-400/[0.06] p-5">
+                  <p className="text-xs font-medium tracking-wide text-teal-300/70 uppercase">Upgrade Account</p>
+                  <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+                    Add an email and password for easier access and Google linking.
                   </p>
                   <button
                     onClick={() => navigate('/signup')}
-                    className="mt-4 rounded-xl bg-cyan-300 px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-slate-950 transition hover:brightness-110"
+                    className="btn-primary mt-4 text-xs"
                   >
                     Add Email Login
                   </button>
@@ -243,29 +279,29 @@ export default function Profile() {
 
         {/* TAB: PATIENTS (DOCTORS) */}
         {activeTab === 'patients' && user.role === 'doctor' && (
-          <div className="space-y-4">
+          <div className="space-y-3 animate-fade-in">
             {appointments.length === 0 ? (
-              <div className="text-center py-12 border border-dashed border-[#1e293b] rounded-2xl text-[#64748b]">
-                <Activity size={32} className="mx-auto mb-3 opacity-50" />
-                <p className="font-bold uppercase">No patient records</p>
+              <div className="text-center py-12 border border-dashed border-white/[0.06] rounded-2xl text-slate-600">
+                <Activity size={28} className="mx-auto mb-3 opacity-40" />
+                <p className="text-sm font-medium">No patient records</p>
               </div>
             ) : (
               appointments.map(apt => (
-                <div key={apt._id} className="bg-[#0f172a] border border-[#1e293b] rounded-xl p-6 hover:border-[#3b82f6] transition">
+                <div key={apt._id} className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-6 transition hover:border-white/[0.1]">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h4 className="text-white font-black text-lg">{apt.patientName}</h4>
-                      <p className="text-[#64748b] text-sm">Reason: {apt.reason}</p>
+                      <h4 className="text-white font-medium text-base">{apt.patientName}</h4>
+                      <p className="text-slate-500 text-sm mt-0.5">Reason: {apt.reason}</p>
                     </div>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-lg uppercase ${apt.status === 'completed' ? 'text-green-400 bg-green-900/20' : 'text-blue-400 bg-blue-900/20'}`}>
+                    <span className={`text-xs font-medium px-3 py-1.5 rounded-lg capitalize ${apt.status === 'completed' ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-400/15' : 'text-teal-300 bg-teal-400/10 border border-teal-400/15'}`}>
                       {apt.status}
                     </span>
                   </div>
 
                   {apt.status === 'completed' ? (
-                    <div className="bg-[#050810] p-4 rounded-lg border border-[#1e293b] text-sm text-[#cbd5e1]">
-                      {apt.prescription && <p className="mb-2"><strong>Rx:</strong> {apt.prescription}</p>}
-                      {apt.doctorNotes && <p><strong>Notes:</strong> {apt.doctorNotes}</p>}
+                    <div className="bg-white/[0.02] border border-white/[0.04] p-4 rounded-xl text-sm text-slate-400">
+                      {apt.prescription && <p className="mb-2"><strong className="text-slate-300">Rx:</strong> {apt.prescription}</p>}
+                      {apt.doctorNotes && <p><strong className="text-slate-300">Notes:</strong> {apt.doctorNotes}</p>}
                     </div>
                   ) : (
                     <PrescriptionUpload 

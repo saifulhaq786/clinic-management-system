@@ -43,42 +43,48 @@ router.post('/send-otp', async (req, res) => {
   try {
     const { phoneNumber } = req.body;
     
-    console.log('📍 [MOBILE/SEND-OTP] Received request with:', { phoneNumber });
+    console.log('[MOBILE/SEND-OTP] Received request with:', { phoneNumber });
     
     if (!phoneNumber) {
       return res.status(400).json({ error: "Phone number is required" });
     }
     
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
-    console.log('📍 [MOBILE/SEND-OTP] Normalized phone:', normalizedPhone);
+    console.log('[MOBILE/SEND-OTP] Normalized phone:', normalizedPhone);
     
     // Validate phone format (should be +X format with 10-15 digits)
     if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
-      console.error('📍 [MOBILE/SEND-OTP] Invalid phone format:', normalizedPhone);
+      console.error('[MOBILE/SEND-OTP] Invalid phone format:', normalizedPhone);
       return res.status(400).json({ error: "Invalid phone number format" });
     }
     
-    // Try to send real SMS via Twilio
+    // Generate and store OTP FIRST — before attempting SMS
     const otp = generateOTP();
-    const smsResult = await sendOTP_SMS(normalizedPhone, otp);
+    storeOTP(normalizedPhone, otp);
     
-    if (!smsResult.success) {
-      console.warn(`⚠️  [SMS FAILED] Could not send actual SMS to ${normalizedPhone}`);
-      console.warn('Reason: Check Twilio credentials and phone number compatibility');
-      return res.status(503).json({
-        error: "SMS service is unavailable right now. Please try again after Twilio is configured."
-      });
+    // Attempt to send real SMS via Twilio
+    let smsSent = false;
+    try {
+      const smsResult = await sendOTP_SMS(normalizedPhone, otp);
+      smsSent = smsResult.success;
+      if (!smsSent) {
+        console.warn(`[SMS] Could not deliver SMS to ${normalizedPhone} — OTP still stored for verification`);
+      }
+    } catch (smsErr) {
+      console.warn(`[SMS] Twilio error: ${smsErr.message} — OTP still stored for verification`);
     }
 
-    storeOTP(normalizedPhone, otp);
-
     const responseData = {
-      message: "✅ OTP sent successfully. Valid for 5 minutes.",
+      message: smsSent 
+        ? "OTP sent successfully. Valid for 5 minutes." 
+        : "OTP generated. SMS delivery may be delayed — check your messages.",
       phoneNumber: normalizedPhone,
-      smsSent: true
+      smsSent,
+      // In non-production, include OTP for testing when SMS fails
+      ...((!smsSent && process.env.NODE_ENV !== 'production') ? { testOTP: otp } : {})
     };
     
-    console.log('📍 [MOBILE/SEND-OTP] Sending response:', responseData);
+    console.log('[MOBILE/SEND-OTP] Response:', { ...responseData, testOTP: '***' });
     res.json(responseData);
   } catch (err) {
     console.error("Send OTP error:", err.message);
