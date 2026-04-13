@@ -72,7 +72,11 @@ export default function MobileLogin() {
       
       setStage('otp');
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to send OTP');
+      if (!err.response && err.message?.includes('Network Error')) {
+        setError('Server is starting up. Please wait 30 seconds and try again.');
+      } else {
+        setError(err.response?.data?.error || err.message || 'Failed to send OTP');
+      }
     } finally {
       setLoading(false);
     }

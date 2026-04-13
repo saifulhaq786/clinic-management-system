@@ -57,6 +57,14 @@ export default function Signup() {
         return;
       }
 
+      // If server auto-verified (email service unavailable), go straight to dashboard
+      if (res.data.token && !res.data.requiresVerification) {
+        persistSession(res.data);
+        navigate('/dashboard');
+        return;
+      }
+
+      // Email verification required
       setVerificationEmail(form.email);
       setShowVerificationModal(true);
     } catch (err) {

@@ -74,21 +74,40 @@ router.post('/register', async (req, res) => {
     
     await user.save();
     
-    console.log(`✅ User registered: ${normalizedEmail}`);
+    console.log(`User registered: ${normalizedEmail}`);
     
-    // Generate and send email verification code
+    // Try to send email verification
     const { generateEmailVerificationCode, storeEmailVerificationCode } = require('../config/firebase');
     const verificationCode = generateEmailVerificationCode();
     storeEmailVerificationCode(normalizedEmail, verificationCode);
     
-    const emailResult = await sendVerificationEmail(normalizedEmail, verificationCode, name);
-    
-    if (!emailResult.success && process.env.NODE_ENV === 'production') {
-      console.error('⚠️  Failed to send verification email');
+    let emailSent = false;
+    try {
+      const emailResult = await sendVerificationEmail(normalizedEmail, verificationCode, name);
+      emailSent = emailResult.success;
+    } catch (emailErr) {
+      console.warn('Email send error:', emailErr.message);
     }
     
+    // If email service is NOT working, auto-verify the user so they can login
+    if (!emailSent) {
+      console.log(`Email service unavailable — auto-verifying user: ${normalizedEmail}`);
+      user.isVerified = true;
+      user.emailVerificationRequired = false;
+      await user.save();
+      
+      const token = createAuthToken(user);
+      return res.status(201).json({ 
+        message: "Account created successfully!",
+        token,
+        user: sanitizeUser(user),
+        requiresVerification: false
+      });
+    }
+    
+    // Email was sent — require verification
     res.status(201).json({ 
-      message: "✅ Account created! Please verify your email to complete registration.",
+      message: "Account created! Please verify your email.",
       email: user.email,
       requiresVerification: true,
       testVerificationCode: process.env.NODE_ENV !== 'production' ? verificationCode : undefined
@@ -139,12 +158,21 @@ router.post('/login', async (req, res) => {
     
     // Check if user has verified their email (NEW registrations only)
     if (!user.isVerified && user.emailVerificationRequired) {
-      console.log(`⚠️  Login attempt with unverified email: ${normalizedEmail}`);
-      return res.status(403).json({ 
-        message: "⚠️ Please verify your email first. Check your inbox for the verification code.",
-        requiresVerification: true,
-        email: normalizedEmail
-      });
+      // Check if email service is available — if not, auto-verify
+      const emailAvailable = !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
+      if (!emailAvailable) {
+        user.isVerified = true;
+        user.emailVerificationRequired = false;
+        await user.save();
+        console.log(`Auto-verified (no email service): ${normalizedEmail}`);
+      } else {
+        console.log(`Login blocked — email unverified: ${normalizedEmail}`);
+        return res.status(403).json({ 
+          message: "Please verify your email first. Check your inbox for the verification code.",
+          requiresVerification: true,
+          email: normalizedEmail
+        });
+      }
     }
     
     // Generate token using CONSISTENT secret
