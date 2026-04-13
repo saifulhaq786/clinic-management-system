@@ -10,46 +10,21 @@ const setupSocket = require('./config/socket');
 const app = express();
 const server = http.createServer(app);
 
-// CORS MUST come before helmet and other middleware
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
-    if (!origin) return callback(null, true);
-    
-    // Development: Allow localhost on any port
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      return callback(null, true);
-    }
-    
-    // Production: Allow Vercel, Render, Netlify
-    const allowedPatterns = [
-      /\.vercel\.app$/,
-      /\.onrender\.com$/,
-      /\.netlify\.app$/,
-    ];
-    
-    if (allowedPatterns.some(pattern => pattern.test(origin))) {
-      return callback(null, true);
-    }
-    
-    // Allow explicit FRONTEND_URL env var
-    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL.replace(/\/$/, '')) {
-      return callback(null, true);
-    }
-    
-    console.warn(`CORS blocked origin: ${origin}`);
-    callback(new Error('CORS not allowed'));
-  },
-  credentials: true
-};
-
-app.use(cors(corsOptions));
+// CORS — allow all origins (auth is handled via JWT, not CORS)
+app.use(cors({ origin: true, credentials: true }));
 
 // Helmet — configured to NOT interfere with CORS
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: false,
 }));
+
+// Version header — helps confirm which deploy is live
+const DEPLOY_VERSION = '2026-04-14-v2';
+app.use((req, res, next) => {
+  res.setHeader('X-Deploy-Version', DEPLOY_VERSION);
+  next();
+});
 
 // Rate limiters — return JSON errors, not plain text
 const limiter = rateLimit({
@@ -119,7 +94,7 @@ app.get('/test-db', async (req, res) => {
   try {
     const User = require('./models/User');
     const count = await User.countDocuments();
-    res.json({ status: 'ok', users: count });
+    res.json({ status: 'ok', users: count, version: DEPLOY_VERSION });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
