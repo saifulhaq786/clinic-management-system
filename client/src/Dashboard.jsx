@@ -6,6 +6,7 @@ import MedicalChatBot from './components/MedicalChatBot';
 import ProfileCompletionModal from './ProfileCompletionModal';
 import PrescriptionUpload from './components/PrescriptionUpload';
 import api from './api';
+import { getStoredUser } from './authSession';
 
 export default function Dashboard() {
   const [appointments, setAppointments] = useState([]);
