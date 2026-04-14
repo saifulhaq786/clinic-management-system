@@ -45,7 +45,7 @@ export default function Login() {
       let msg = "Login failed. Please check your credentials.";
       if (err.code === 'auth/user-not-found') msg = "No account found with this email.";
       if (err.code === 'auth/wrong-password') msg = "Incorrect password.";
-      if (err.code === 'auth/invalid-credential') msg = "Invalid credentials.";
+      if (err.code === 'auth/invalid-credential') msg = "Invalid credentials. (Tip: If you just migrated, please Sign Up fresh for this new project)";
       
       setError(err.response?.data?.message || msg);
     } finally {

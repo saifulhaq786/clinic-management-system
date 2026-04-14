@@ -24,17 +24,26 @@ export default function Dashboard() {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    if (!token) {
-      navigate('/login');
-      return;
+    // Provide a small grace period for the token to settle in localStorage
+    const storedToken = localStorage.getItem('token');
+    if (!storedToken && !token) {
+      const timer = setTimeout(() => {
+        if (!localStorage.getItem('token')) {
+          navigate('/login');
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
+    
     setCurrentUser(user);
-    fetchData();
+    if (storedToken || token) {
+      fetchData();
+    }
     
     if (user && !user.age && user.phone) {
       setShowProfileModal(true);
     }
-  }, [navigate, token]);
+  }, [navigate, token, user]);
 
   const showSuccess = (msg) => {
     setSuccessMsg(msg);

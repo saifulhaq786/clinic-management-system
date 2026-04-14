@@ -229,6 +229,7 @@ router.post('/login', async (req, res) => {
 // @desc    Google OAuth login
 router.post('/google', async (req, res) => {
   try {
+    const { credential, accessToken, role, location } = req.body;
     let payload;
     if (credential) {
       const ticket = await googleClient.verifyIdToken({
@@ -256,22 +257,13 @@ router.post('/google', async (req, res) => {
     const name = payload.name || normalizedEmail.split('@')[0];
     const picture = payload.picture || null;
 
-    let user = await User.findOne({ email: normalizedEmail });
+    const isPhonePlaceholderEmail = (email) => email && email.includes('@phone.local');
 
-    if (!user) {
-      user = new User({
-        name,
-        email: normalizedEmail,
-        googleId,
-        password: `google_oauth_${googleId}`,
-        role: role === 'doctor' ? 'doctor' : 'patient',
-        isVerified: true,
-        emailVerificationRequired: false,
-        avatar: picture,
-        location: location?.type === 'Point' ? location : { type: 'Point', coordinates: [0, 0] }
-      });
-      await user.save();
-    } else {
+    let user = await User.findOne({ 
+      $or: [{ googleId }, { email: normalizedEmail }]
+    });
+
+    if (user) {
       user.googleId = googleId;
       user.avatar = picture || user.avatar;
       user.isVerified = true;
@@ -280,9 +272,28 @@ router.post('/google', async (req, res) => {
         user.email = normalizedEmail;
       }
       await user.save();
+    } else {
+      user = new User({
+        name,
+        email: normalizedEmail,
+        googleId,
+        role: role === 'doctor' ? 'doctor' : 'patient',
+        isVerified: true,
+        emailVerificationRequired: false,
+        avatar: picture,
+        location: location?.type === 'Point' ? location : { type: 'Point', coordinates: [0, 0] },
+        password: `google_oauth_${googleId}`
+      });
+      await user.save();
     }
 
     const token = createAuthToken(user);
+    res.json({ token, user: sanitizeUser(user) });
+  } catch (err) {
+    console.error("❌ Google Login Error:", err.message);
+    res.status(500).json({ error: "Google sign-in failed. Please try again or Sign Up fresh." });
+  }
+});
 
     res.json({
       token,
