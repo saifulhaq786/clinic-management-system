@@ -11,7 +11,6 @@ export default function GoogleAuthButton({ role = 'patient', location, setError 
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        // We'll send the access token to our backend
         const res = await api.post('/api/auth/google', {
           accessToken: tokenResponse.access_token,
           role,
@@ -23,7 +22,7 @@ export default function GoogleAuthButton({ role = 'patient', location, setError 
         setError?.(err.response?.data?.error || err.message || 'Google sign-in failed.');
       }
     },
-    onError: () => setError?.('Google sign-in was cancelled or failed.'),
+    onError: () => setError?.('Google sign-in blocked or cancelled. (Tip: Disable Brave Shields or Ad-blockers)'),
   });
 
   if (!googleClientId) return null;
@@ -38,7 +37,13 @@ export default function GoogleAuthButton({ role = 'patient', location, setError 
 
       <button
         type="button"
-        onClick={() => login()}
+        onClick={() => {
+          try {
+            login();
+          } catch (e) {
+            setError?.("Google Login is blocked by your browser. Please disable Brave Shields/Ad-blockers.");
+          }
+        }}
         className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/[0.06] bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition-all hover:bg-slate-50 hover:shadow-lg active:scale-[0.98]"
       >
         <svg className="h-5 w-5" viewBox="0 0 24 24">

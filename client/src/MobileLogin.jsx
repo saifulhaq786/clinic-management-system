@@ -68,12 +68,12 @@ export default function MobileLogin() {
         return;
       }
 
-      // 1. Initialize Recaptcha (Singleton pattern)
+      // 1. Initialize Recaptcha (Visible for stability)
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          'size': 'invisible',
-          'callback': (response) => {
-            // reCAPTCHA solved, allow signInWithPhoneNumber.
+          'size': 'normal',
+          'callback': () => {
+            console.log("✅ reCAPTCHA solved");
           },
           'expired-callback': () => {
             setError("reCAPTCHA expired. Please try again.");
@@ -83,15 +83,22 @@ export default function MobileLogin() {
             }
           }
         });
+        await window.recaptchaVerifier.render(); // Explicit render for visible mode
       }
 
       // 2. Send OTP via Firebase
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
       setConfirmationResult(confirmation);
       
-      // 3. Mark if user exists for later
-      const userRes = await api.get(`/api/mobile/user/${encodeURIComponent(phoneNumber)}`);
-      setUserExists(userRes.data.exists);
+      // 3. Mark if user exists for later (Resilient check)
+      try {
+        const userRes = await api.get(`/api/mobile/user/${encodeURIComponent(phoneNumber)}`);
+        setUserExists(userRes.data.exists);
+      } catch (checkErr) {
+        console.warn("Mobile user check failed, continuing anyway:", checkErr.message);
+        // Fallback: assume user might exist or let the backend handle it
+        setUserExists(true); 
+      }
 
       setSuccess("Verification code sent to your phone!");
       setStage('otp');
