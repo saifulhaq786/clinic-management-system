@@ -485,7 +485,7 @@ router.post('/verify-email-code', async (req, res) => {
     // Mark user as verified
     const user = await User.findOneAndUpdate(
       { email: normalizedEmail },
-      { isVerified: true },
+      { isVerified: true, emailVerificationRequired: false },
       { new: true }
     );
 

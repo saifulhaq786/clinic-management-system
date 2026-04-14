@@ -128,7 +128,8 @@ export default function Login() {
         <EmailVerificationModal
           email={verificationEmail}
           initialCode={verificationCode}
-          onVerified={() => {
+          onVerified={(data) => {
+            persistSession(data);
             setShowVerificationModal(false);
             navigate('/dashboard');
           }}

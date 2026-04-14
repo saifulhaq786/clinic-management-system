@@ -77,7 +77,7 @@ export default function Signup() {
   };
 
   const handleVerificationComplete = (userData) => {
-    console.log('Email verified, user data:', userData);
+    persistSession(userData);
     setShowVerificationModal(false);
     navigate('/dashboard');
   };

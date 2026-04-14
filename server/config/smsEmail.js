@@ -56,12 +56,12 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD  // Use 16-character app password, not regular password
+      pass: process.env.EMAIL_PASSWORD
     },
-    // Gmail specific settings
-    tls: {
-      rejectUnauthorized: false
-    }
+    tls: { rejectUnauthorized: false },
+    connectionTimeout: 10000, // 10s to connect
+    greetingTimeout: 10000,   // 10s for SMTP greeting
+    socketTimeout: 15000,     // 15s for socket idle
   });
 
   // Verify connection
