@@ -127,7 +127,11 @@ export default function MobileLogin() {
           phoneNumber, 
           firebaseToken: idToken 
         });
-        persistSession(loginRes.data.user, loginRes.data.token);
+        // FIX: Wrap in object to match persistSession({ token, user })
+        persistSession({ 
+          token: loginRes.data.token, 
+          user: loginRes.data.user 
+        });
         navigate('/dashboard');
       } else {
         // Move to profile step for new user

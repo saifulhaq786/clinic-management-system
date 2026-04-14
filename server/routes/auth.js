@@ -53,35 +53,41 @@ router.post('/register', async (req, res) => {
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
     
-    // Check if user already exists (case-insensitive)
-    const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
-      console.log(`⚠️  Registration attempt with existing email: ${normalizedEmail}`);
-      return res.status(400).json({ error: "Email already registered. Try logging in or use a different email." });
+    // Self-Healing: Check if user exists. 
+    // If they do, we "repair" the account with the new Firebase UID instead of erroring out.
+    let user = await User.findOne({ email: normalizedEmail });
+    
+    if (user) {
+      console.log(`🔄 Syncing existing account with new Firebase UID: ${normalizedEmail}`);
+      user.firebaseUid = firebaseUid;
+      user.name = name;
+      user.role = role;
+      user.location = location;
+      user.specialty = specialty;
+      // Re-hash password if provided
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+      await user.save();
+    } else {
+      // Create fresh user
+      user = new User({ 
+        name, 
+        email: normalizedEmail,
+        password: await bcrypt.hash(password, await bcrypt.genSalt(10)), 
+        role, 
+        location, 
+        specialty,
+        firebaseUid,
+        isVerified: false,
+        emailVerificationRequired: true
+      });
+      await user.save();
+      console.log(`✨ Created new account: ${normalizedEmail}`);
     }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const user = new User({ 
-      name, 
-      email: normalizedEmail,
-      password: hashedPassword, 
-      role, 
-      location, 
-      specialty,
-      firebaseUid, // Link to Firebase Account
-      isVerified: false,
-      emailVerificationRequired: true // Flag for new registrations
-    });
-    
-    await user.save();
-    
-    console.log(`User registered: ${normalizedEmail}`);
     
     // Generate and save code natively in DB
     const verificationCode = verificationService.generateCode();
-    await verificationService.saveCode(normalizedEmail, verificationCode, 15); // 15 mins expiry
+    await verificationService.saveCode(normalizedEmail, verificationCode, 15);
     
     let emailSent = false;
     try {
@@ -91,28 +97,23 @@ router.post('/register', async (req, res) => {
       console.warn('Email send error:', emailErr.message);
     }
     
-    // If email service is NOT working, auto-verify the user so they can login
     if (!emailSent) {
-      console.log(`Email service unavailable — auto-verifying user: ${normalizedEmail}`);
       user.isVerified = true;
       user.emailVerificationRequired = false;
       await user.save();
-      
-      const token = createAuthToken(user);
       return res.status(201).json({ 
-        message: "Account created successfully!",
-        token,
+        message: "Account synced successfully!",
+        token: createAuthToken(user),
         user: sanitizeUser(user),
         requiresVerification: false
       });
     }
     
-    // Email was sent — require verification
     res.status(201).json({ 
-      message: "Account created! Please verify your email.",
+      message: "Registration successful! Verification email sent.",
       email: user.email,
       requiresVerification: true,
-      verificationCode: verificationCode // Always include so modal can show it
+      verificationCode: verificationCode 
     });
   } catch (err) {
     console.error("Registration error:", err.message);
