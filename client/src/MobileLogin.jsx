@@ -68,11 +68,20 @@ export default function MobileLogin() {
         return;
       }
 
-      // 1. Initialize Recaptcha
+      // 1. Initialize Recaptcha (Singleton pattern)
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           'size': 'invisible',
-          'callback': () => {}
+          'callback': (response) => {
+            // reCAPTCHA solved, allow signInWithPhoneNumber.
+          },
+          'expired-callback': () => {
+            setError("reCAPTCHA expired. Please try again.");
+            if (window.recaptchaVerifier) {
+              window.recaptchaVerifier.clear();
+              window.recaptchaVerifier = null;
+            }
+          }
         });
       }
 
