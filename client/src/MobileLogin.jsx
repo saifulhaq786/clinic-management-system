@@ -159,7 +159,11 @@ export default function MobileLogin() {
         name, 
         role 
       });
-      persistSession(res.data.user, res.data.token);
+      // FIX: Use object format to match persistSession({ token, user })
+      persistSession({ 
+        token: res.data.token, 
+        user: res.data.user 
+      });
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed');
