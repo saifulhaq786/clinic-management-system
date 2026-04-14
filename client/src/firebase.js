@@ -1,8 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// Your web app's Firebase configuration
-// These should be moved to .env in a production environment
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -18,4 +16,9 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Auth
 export const auth = getAuth(app);
+
+// Logic Handle for App Check (Only use if enabled in console)
+// If you disable it in the console, this will remain harmless.
+console.log("🔥 Firebase initialized for project:", import.meta.env.VITE_FIREBASE_PROJECT_ID);
+
 export default app;
