@@ -229,21 +229,23 @@ router.post('/login', async (req, res) => {
 // @desc    Google OAuth login
 router.post('/google', async (req, res) => {
   try {
-    const { credential, role, location } = req.body;
-
-    if (!googleClient || !process.env.GOOGLE_CLIENT_ID) {
-      return res.status(503).json({ error: "Google sign-in is not configured on the server." });
+    let payload;
+    if (credential) {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+      payload = ticket.getPayload();
+    } else if (accessToken) {
+      const axios = require('axios');
+      const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      payload = response.data;
+      payload.email_verified = true;
+    } else {
+      return res.status(400).json({ error: "Google credential or access token is required" });
     }
-
-    if (!credential) {
-      return res.status(400).json({ error: "Google credential is required" });
-    }
-
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
-    const payload = ticket.getPayload();
 
     if (!payload?.email || !payload.email_verified) {
       return res.status(401).json({ error: "Google account email could not be verified." });
