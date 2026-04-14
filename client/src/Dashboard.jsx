@@ -149,7 +149,7 @@ export default function Dashboard() {
                   {user.role === 'doctor' ? 'Doctor Dashboard' : 'Patient Portal'}
                 </h1>
                 <p className="text-sm text-slate-500">
-                  Welcome, <span className="text-slate-300">{user.name}</span>
+                  Welcome, <span className="text-slate-300">{user?.name || 'User'}</span>
                 </p>
               </div>
             </div>

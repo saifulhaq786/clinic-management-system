@@ -136,8 +136,11 @@ router.post('/verify-otp', async (req, res) => {
     // Find or create user
     let user = await User.findOne({ phone: normalizedPhone });
     
-    if (!user) {
-      // New user - require name and role
+    if (user) {
+      user.isVerified = true;
+      user.emailVerificationRequired = false;
+      await user.save();
+    } else {
       if (!name || !role) {
         return res.status(400).json({ 
           error: "Name and role are required for new users" 

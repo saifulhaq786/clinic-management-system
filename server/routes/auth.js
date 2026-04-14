@@ -264,6 +264,7 @@ router.post('/google', async (req, res) => {
     });
 
     if (user) {
+      // Sync Google ID if missing, and ensure verified status
       user.googleId = googleId;
       user.avatar = picture || user.avatar;
       user.isVerified = true;
@@ -272,7 +273,9 @@ router.post('/google', async (req, res) => {
         user.email = normalizedEmail;
       }
       await user.save();
+      console.log(`✅ Google User Synced: ${normalizedEmail}`);
     } else {
+      // Create full production-ready profile for new Google users
       user = new User({
         name,
         email: normalizedEmail,
@@ -281,17 +284,19 @@ router.post('/google', async (req, res) => {
         isVerified: true,
         emailVerificationRequired: false,
         avatar: picture,
-        location: location?.type === 'Point' ? location : { type: 'Point', coordinates: [0, 0] },
-        password: `google_oauth_${googleId}`
+        location: location?.type === 'Point' ? location : { type: 'Point', coordinates: [0, 67] }, // Default to safe coords if missing
+        password: `google_oauth_${googleId}`,
+        createdAt: new Date()
       });
       await user.save();
+      console.log(`✨ New Google User Registered: ${normalizedEmail}`);
     }
 
     const token = createAuthToken(user);
     res.json({ token, user: sanitizeUser(user) });
   } catch (err) {
-    console.error("❌ Google Login Error:", err.message);
-    res.status(500).json({ error: "Google sign-in failed. Please try again or Sign Up fresh." });
+    console.error("❌ Google Auth Backend Error:", err.message);
+    res.status(500).json({ error: "External authentication failed. Please try again or use manual sign up." });
   }
 });
 

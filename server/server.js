@@ -10,6 +10,9 @@ const setupSocket = require('./config/socket');
 const app = express();
 const server = http.createServer(app);
 
+// CRITICAL for Render/Proxies: Correctly identify user IP
+app.set('trust proxy', 1);
+
 // CORS — allow all origins (auth is handled via JWT, not CORS)
 app.use(cors({ origin: true, credentials: true }));
 
@@ -29,14 +32,14 @@ app.use((req, res, next) => {
 // Rate limiters — return JSON errors, not plain text
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 500, // Increased for stability
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please try again in a few minutes.' }
 });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 100, // Increased for launch testing
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
