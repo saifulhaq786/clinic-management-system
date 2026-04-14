@@ -17,22 +17,25 @@ export default function PrescriptionUpload({ appointmentId, onSave }) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('prescription', prescription);
-      formData.append('doctorNotes', doctorNotes);
-      formData.append('status', 'completed');
-
-      // Add files
-      files.forEach(f => {
-        formData.append('prescriptionFiles[]', f.file);
+      // Convert all files to base64 data URL promises
+      const filePromises = files.map(f => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(f.file);
+          reader.onload = () => resolve({ fileName: f.name, dataURL: reader.result });
+          reader.onerror = error => reject(error);
+        });
       });
+      
+      const prescriptionFiles = await Promise.all(filePromises);
 
       const res = await api.patch(
         `/api/appointments/${appointmentId}`,
         {
           prescription,
           doctorNotes,
-          status: 'completed'
+          status: 'completed',
+          prescriptionFiles
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -40,7 +43,7 @@ export default function PrescriptionUpload({ appointmentId, onSave }) {
       alert('Prescription saved to medical vault!');
       onSave();
     } catch (err) {
-      alert('Failed to save prescription');
+      alert('Failed to save prescription: ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
     }

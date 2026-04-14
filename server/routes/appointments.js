@@ -50,7 +50,41 @@ router.get('/nearby', auth, async (req, res) => {
       };
     }));
 
-    res.json(enriched);
+    // Mock External Clinics from "Google Places API"
+    const mockExternalClinics = [
+      {
+        _id: 'ext_google_1',
+        name: 'City Care Hospital (External)',
+        specialty: 'General Hospital',
+        rating: 4.8,
+        totalReviews: 124,
+        distance: parseFloat((Math.random() * 5 + 1).toFixed(2)),
+        isExternal: true,
+        address: '123 Medical Blvd'
+      },
+      {
+        _id: 'ext_google_2',
+        name: 'Prime Health Clinic (External)',
+        specialty: 'Multispecialty',
+        rating: 4.5,
+        totalReviews: 89,
+        distance: parseFloat((Math.random() * 5 + 2).toFixed(2)),
+        isExternal: true,
+        address: '45 Wellness Ave'
+      },
+      {
+        _id: 'ext_google_3',
+        name: 'Sunrise Medical Center (External)',
+        specialty: 'Urgent Care',
+        rating: 4.2,
+        totalReviews: 56,
+        distance: parseFloat((Math.random() * 5 + 3).toFixed(2)),
+        isExternal: true,
+        address: '77 Emergency Rd'
+      }
+    ];
+
+    res.json([...enriched, ...mockExternalClinics].sort((a,b) => a.distance - b.distance));
   } catch (err) {
     console.error("Nearby Error:", err);
     res.status(500).json({ message: "Error fetching nearby clinics" });
@@ -147,9 +181,16 @@ router.patch('/:id', auth, async (req, res) => {
     const updateData = { status, updatedAt: Date.now() };
     if (prescription !== undefined) updateData.prescription = prescription;
     if (doctorNotes !== undefined) updateData.doctorNotes = doctorNotes;
-    if (prescriptionFiles) updateData.prescriptionFiles = prescriptionFiles;
     if (scheduledDate) updateData.scheduledDate = new Date(scheduledDate);
     if (status === 'completed') updateData.completedDate = Date.now();
+
+    // Map base64 data URLs from client to `fileUrl` for MongoDB schema
+    if (prescriptionFiles && Array.isArray(prescriptionFiles)) {
+      updateData.prescriptionFiles = prescriptionFiles.map(f => ({
+        fileName: f.fileName,
+        fileUrl: f.dataURL
+      }));
+    }
 
     const updated = await Appointment.findByIdAndUpdate(
       req.params.id, 

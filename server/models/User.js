@@ -24,6 +24,7 @@ const userSchema = new mongoose.Schema({
   // Auth & Verification
   isVerified: { type: Boolean, default: false },
   emailVerificationRequired: { type: Boolean, default: false },
+  verificationCode: { type: String, default: null },
   googleId: { type: String, default: null },
   avatar: { type: String, default: null },
   

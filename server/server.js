@@ -44,8 +44,9 @@ const authLimiter = rateLimit({
 });
 app.use(limiter);
 
-// Body parser
-app.use(express.json());
+// Body parser with expanded limits for base64 uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('pdfs'));
 
 // Database Connection
@@ -86,6 +87,8 @@ app.use('/api/chat', require('./routes/chat'));
 app.use('/api/prescriptions', require('./routes/prescriptions'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/blood', require('./routes/blood')); // New Blood Bank routes
+
 
 // Health check
 const PORT = process.env.PORT || 5001;

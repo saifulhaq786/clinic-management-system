@@ -91,12 +91,24 @@ export default function MedicalVault() {
                   <p className="text-[#3b82f6] text-xs font-black uppercase mb-2">Attached Reports</p>
                   <div className="space-y-2">
                     {record.prescriptionFiles.map((file, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-[#1e3a8a]/20 p-3 rounded-lg border border-[#1e3a8a]/30">
-                        <FileText size={16} className="text-[#3b82f6]" />
-                        <span className="text-[#cbd5e1] flex-1">{file.fileName}</span>
-                        <button className="text-[#3b82f6] hover:text-white transition">
-                          <Download size={16} />
-                        </button>
+                      <div key={idx} className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 bg-[#1e3a8a]/20 p-3 rounded-lg border border-[#1e3a8a]/30">
+                          <FileText size={16} className="text-[#3b82f6]" />
+                          <span className="text-[#cbd5e1] flex-1">{file.fileName}</span>
+                          <a href={file.fileUrl} download={file.fileName} className="text-[#3b82f6] hover:text-white transition">
+                            <Download size={16} />
+                          </a>
+                        </div>
+                        {file.fileUrl?.startsWith('data:image/') && (
+                          <div className="rounded-lg overflow-hidden border border-[#1e293b]">
+                            <img src={file.fileUrl} alt={file.fileName} className="w-full object-cover max-h-64" />
+                          </div>
+                        )}
+                        {file.fileUrl?.startsWith('data:application/pdf') && (
+                          <div className="h-64 rounded-lg overflow-hidden border border-[#1e293b]">
+                            <embed src={file.fileUrl} type="application/pdf" className="w-full h-full" />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

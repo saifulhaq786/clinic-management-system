@@ -45,7 +45,7 @@ export default function AuthShell({
         <section className="relative flex flex-col justify-between rounded-3xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm md:p-8 lg:p-10">
           <div>
             {/* Badge */}
-            <div className="mb-10 inline-flex items-center gap-2 rounded-full border border-teal-400/15 bg-teal-400/[0.06] px-4 py-2 text-xs font-medium tracking-wide text-teal-300">
+            <div className="mb-10 inline-flex items-center gap-2 rounded-full border border-teal-400/15 bg-teal-400/[0.06] px-4 py-2 text-xs font-medium tracking-wide text-teal-300 animate-pulse-glow">
               <div className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-pulse" />
               Elite Clinic
             </div>
@@ -81,8 +81,8 @@ export default function AuthShell({
         </section>
 
         {/* Right Panel — Form */}
-        <section className="relative flex items-center justify-center">
-          <div className="w-full max-w-xl rounded-3xl border border-white/[0.06] bg-[#0c1222]/80 p-6 shadow-2xl shadow-black/20 backdrop-blur-xl md:p-8 lg:p-10">
+        <section className="relative flex items-center justify-center perspective-1000">
+          <div className="w-full max-w-xl rounded-3xl border border-white/[0.1] p-6 md:p-8 lg:p-10 animate-float-3d glass-panel preserve-3d">
             {children}
           </div>
         </section>

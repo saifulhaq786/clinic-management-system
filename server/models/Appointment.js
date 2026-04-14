@@ -12,6 +12,7 @@ const appointmentSchema = new mongoose.Schema({
     enum: ['pending', 'accepted', 'cancelled', 'completed'], 
     default: 'pending' 
   },
+  isPaid: { type: Boolean, default: false },
   
   // Scheduling
   scheduledDate: { type: Date, default: null },

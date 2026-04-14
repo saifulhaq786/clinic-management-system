@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Activity, LogOut, Check, X, FileText, Clock, Users, Calendar, Briefcase, ChevronRight, User } from 'lucide-react';
+import { MapPin, Activity, LogOut, Check, X, FileText, Clock, Users, Calendar, Briefcase, ChevronRight, User, Droplet } from 'lucide-react';
 import DoctorModal from './components/DoctorModal';
 import MedicalChatBot from './components/MedicalChatBot';
 import ProfileCompletionModal from './ProfileCompletionModal';
+import PrescriptionUpload from './components/PrescriptionUpload';
 import api from './api';
 
 export default function Dashboard() {
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [nextAppointment, setNextAppointment] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [uploadAptId, setUploadAptId] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   
   const navigate = useNavigate();
@@ -72,6 +74,24 @@ export default function Dashboard() {
     } catch (err) { console.error("Status update failed", err); }
   };
 
+  const handlePayment = async (appointmentId) => {
+    if(!window.confirm("Complete mock payment for $50.00?")) return;
+    try {
+      // 1. Create intent
+      const intentRes = await api.post('/api/payments/intent', { appointmentId, amount: 50.00 }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // 2. Confirm payment
+      await api.post('/api/payments/confirm', { transactionId: intentRes.data.transactionId }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('✅ Payment successful!');
+      fetchData(); // Refresh UI
+    } catch (err) {
+      alert('❌ Payment failed: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
@@ -109,10 +129,26 @@ export default function Dashboard() {
             
             <div className="flex gap-2">
               <button 
+                onClick={() => navigate('/blood-bank')} 
+                className="btn-secondary text-xs bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+              >
+                <Droplet size={15} />
+                <span className="hidden sm:inline">Blood Bank</span>
+              </button>
+              {user.role === 'patient' && (
+                <button 
+                  onClick={() => navigate('/medical-vault')} 
+                  className="btn-secondary text-xs"
+                >
+                  <FileText size={15} />
+                  <span className="hidden sm:inline">Medical Vault</span>
+                </button>
+              )}
+              <button 
                 onClick={() => navigate('/profile')} 
                 className="btn-secondary text-xs"
               >
-                <FileText size={15} />
+                <User size={15} />
                 <span className="hidden sm:inline">Profile</span>
               </button>
               <button 
@@ -192,7 +228,10 @@ export default function Dashboard() {
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-white group-hover:text-teal-200 transition-colors truncate">{doctor.name}</h4>
+                          <h4 className="text-sm font-medium text-white group-hover:text-teal-200 transition-colors truncate">
+                            {doctor.name}
+                            {doctor.isExternal && <span className="ml-2 text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30 align-middle">External API</span>}
+                          </h4>
                           <p className="text-xs text-teal-400/80 mt-0.5">{doctor.specialty}</p>
                         </div>
                         <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/15">
@@ -200,21 +239,28 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-1.5 text-xs text-slate-500">
-                        <div className="flex items-center gap-1.5 bg-white/[0.02] rounded-lg px-2.5 py-1.5">
-                          <Users size={12} className="text-teal-400/60" /> {doctor.queueCount} in queue
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-white/[0.02] rounded-lg px-2.5 py-1.5">
-                          <Clock size={12} className="text-teal-400/60" /> {doctor.estimatedWait}m wait
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-white/[0.02] rounded-lg px-2.5 py-1.5">
+                        {!doctor.isExternal && (
+                          <div className="flex items-center gap-1.5 bg-white/[0.02] rounded-lg px-2.5 py-1.5">
+                            <Users size={12} className="text-teal-400/60" /> {doctor.queueCount} in queue
+                          </div>
+                        )}
+                        {!doctor.isExternal && (
+                          <div className="flex items-center gap-1.5 bg-white/[0.02] rounded-lg px-2.5 py-1.5">
+                            <Clock size={12} className="text-teal-400/60" /> {doctor.estimatedWait}m wait
+                          </div>
+                        )}
+                        <div className={`flex items-center gap-1.5 bg-white/[0.02] rounded-lg px-2.5 py-1.5 ${doctor.isExternal ? 'col-span-2' : ''}`}>
                           <MapPin size={12} className="text-rose-400/60" /> {doctor.distance}km
+                          {doctor.isExternal && <span className="ml-auto text-slate-400 truncate">{doctor.address}</span>}
                         </div>
-                        <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${doctor.isAvailable ? 'bg-emerald-500/[0.05] text-emerald-400' : 'bg-rose-500/[0.05] text-rose-400'}`}>
-                          <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                          {doctor.isAvailable ? 'Available' : 'Busy'}
-                        </div>
+                        {!doctor.isExternal && (
+                          <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${doctor.isAvailable ? 'bg-emerald-500/[0.05] text-emerald-400' : 'bg-rose-500/[0.05] text-rose-400'}`}>
+                            <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                            {doctor.isAvailable ? 'Available' : 'Busy'}
+                          </div>
+                        )}
                       </div>
-                      <div className="hidden group-hover:flex items-center justify-end gap-1.5 mt-3 pt-3 border-t border-white/[0.04]">
+                      <div className="flex items-center justify-end gap-1.5 mt-3 pt-3 border-t border-white/[0.04] opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <span className="text-teal-300 text-xs">View Details</span>
                         <ChevronRight size={13} className="text-teal-300/60" />
                       </div>
@@ -277,10 +323,16 @@ export default function Dashboard() {
                               </button>
                             )}
                             <button 
-                              onClick={() => updateStatus(apt._id, 'completed')} 
+                              onClick={() => setUploadAptId(uploadAptId === apt._id ? null : apt._id)}
                               className="btn-primary !w-auto !py-2 !px-4 text-xs"
                             >
-                              Complete
+                              Prescribe & Complete
+                            </button>
+                            <button 
+                              onClick={() => updateStatus(apt._id, 'completed')} 
+                              className="btn-secondary !w-auto !py-2 !px-4 text-xs hidden md:block"
+                            >
+                              Complete Only
                             </button>
                             <button 
                               onClick={() => updateStatus(apt._id, 'cancelled')} 
@@ -291,7 +343,36 @@ export default function Dashboard() {
                             </button>
                           </div>
                         )}
+                        
+                        {user.role === 'patient' && (apt.status === 'accepted' || apt.status === 'completed') && (
+                          <div className="flex gap-2 ml-auto md:ml-0">
+                            {apt.isPaid ? (
+                              <span className="text-xs font-medium px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.1] text-emerald-400">
+                                Paid
+                              </span>
+                            ) : (
+                              <button 
+                                onClick={() => handlePayment(apt._id)}
+                                className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition-all text-xs shadow-lg shadow-blue-500/20"
+                              >
+                                Pay Now
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
+                      
+                      {uploadAptId === apt._id && (
+                        <div className="mt-4 pt-4 border-t border-white/[0.04] animate-fade-in w-full">
+                          <PrescriptionUpload 
+                            appointmentId={apt._id} 
+                            onSave={() => {
+                              setUploadAptId(null);
+                              fetchData();
+                            }} 
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
