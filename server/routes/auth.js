@@ -158,21 +158,29 @@ router.post('/login', async (req, res) => {
     
     // Check if user has verified their email (NEW registrations only)
     if (!user.isVerified && user.emailVerificationRequired) {
-      // Check if email service is available — if not, auto-verify
-      const emailAvailable = !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
-      if (!emailAvailable) {
-        user.isVerified = true;
-        user.emailVerificationRequired = false;
-        await user.save();
-        console.log(`Auto-verified (no email service): ${normalizedEmail}`);
-      } else {
-        console.log(`Login blocked — email unverified: ${normalizedEmail}`);
-        return res.status(403).json({ 
-          message: "Please verify your email first. Check your inbox for the verification code.",
-          requiresVerification: true,
-          email: normalizedEmail
-        });
+      // Generate a fresh verification code for them
+      const { generateEmailVerificationCode, storeEmailVerificationCode } = require('../config/firebase');
+      const code = generateEmailVerificationCode();
+      storeEmailVerificationCode(normalizedEmail, code);
+      
+      // Try sending email (may fail on cloud servers)
+      let emailSent = false;
+      try {
+        const emailResult = await sendVerificationEmail(normalizedEmail, code, user.name);
+        emailSent = emailResult.success;
+      } catch (e) {
+        console.warn('Re-send verification email failed:', e.message);
       }
+      
+      console.log(`Login blocked — email unverified: ${normalizedEmail}, emailSent: ${emailSent}`);
+      return res.status(403).json({ 
+        message: emailSent 
+          ? "Please verify your email. A new code has been sent to your inbox."
+          : "Please verify your email using the code shown below.",
+        requiresVerification: true,
+        email: normalizedEmail,
+        verificationCode: code // Always include so UI can show it
+      });
     }
     
     // Generate token using CONSISTENT secret

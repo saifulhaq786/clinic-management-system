@@ -13,6 +13,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [verificationEmail, setVerificationEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const navigate = useNavigate();
 
@@ -27,7 +28,10 @@ export default function Login() {
     } catch (err) {
       if (err.response?.data?.requiresVerification) {
         setVerificationEmail(err.response.data.email || email);
+        setVerificationCode(err.response.data.verificationCode || '');
         setShowVerificationModal(true);
+        setError(''); // Don't show error when modal is visible
+        return;
       }
       setError(err.response?.data?.message || "Login failed. Please check your credentials.");
     } finally {
@@ -123,6 +127,7 @@ export default function Login() {
       {showVerificationModal && (
         <EmailVerificationModal
           email={verificationEmail}
+          initialCode={verificationCode}
           onVerified={() => {
             setShowVerificationModal(false);
             navigate('/dashboard');
