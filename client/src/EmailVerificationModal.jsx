@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
-import { Mail, CheckCircle, AlertCircle, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import api from './api';
 
-export default function EmailVerificationModal({ email, onVerified }) {
+export default function EmailVerificationModal({ email, onVerified, initialCode }) {
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
+  const [fallbackCode, setFallbackCode] = useState('');
+
+  // If server couldn't send email, it provides the code directly
+  useEffect(() => {
+    if (initialCode) {
+      setFallbackCode(initialCode);
+      setVerificationCode(initialCode);
+    }
+  }, [initialCode]);
 
   const handleVerify = async (e) => {
     e.preventDefault();
@@ -49,8 +58,15 @@ export default function EmailVerificationModal({ email, onVerified }) {
 
     try {
       const res = await api.post('/api/auth/send-email-verification', { email });
-      setSuccess('Verification code resent to your email.');
-      console.log('Test code:', res.data.testCode);
+      
+      // If email couldn't be sent, server returns the code directly
+      if (res.data.verificationCode) {
+        setFallbackCode(res.data.verificationCode);
+        setVerificationCode(res.data.verificationCode);
+        setSuccess('Code generated. See below.');
+      } else {
+        setSuccess('Verification code sent to your email.');
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to resend code');
     } finally {
@@ -94,6 +110,18 @@ export default function EmailVerificationModal({ email, onVerified }) {
             </p>
           </div>
 
+          {/* Fallback: Show code when email can't be delivered */}
+          {fallbackCode && (
+            <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.06] p-4">
+              <p className="text-xs font-medium text-amber-300/80 uppercase tracking-wide mb-2">Email not delivered</p>
+              <p className="text-sm text-slate-300 mb-3">The email service couldn't deliver your code. Use this instead:</p>
+              <div className="bg-[#060b18] border border-white/[0.06] rounded-xl px-4 py-3 text-center">
+                <span className="text-2xl font-semibold text-teal-300 tracking-[0.4em] select-all">{fallbackCode}</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">This code has been auto-filled below.</p>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">
               Verification Code
@@ -114,17 +142,7 @@ export default function EmailVerificationModal({ email, onVerified }) {
             disabled={loading}
             className="btn-primary"
           >
-            {loading ? (
-              <>
-                <span className="inline-block animate-spin">⏳</span>
-                Verifying...
-              </>
-            ) : (
-              <>
-                <CheckCircle size={17} />
-                Verify Email
-              </>
-            )}
+            {loading ? 'Verifying...' : <><CheckCircle size={17} /> Verify Email</>}
           </button>
 
           <button

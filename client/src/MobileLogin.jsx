@@ -16,6 +16,7 @@ export default function MobileLogin() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [userExists, setUserExists] = useState(false);
+  const [fallbackOtp, setFallbackOtp] = useState('');
   
   const navigate = useNavigate();
 
@@ -66,6 +67,12 @@ export default function MobileLogin() {
       const res = await api.post('/api/mobile/send-otp', { phoneNumber });
 
       setSuccess(res.data.message || 'OTP sent. Valid for 5 minutes.');
+      
+      // If SMS couldn't be delivered, server returns the OTP directly
+      if (res.data.otp) {
+        setFallbackOtp(res.data.otp);
+        setOtp(res.data.otp); // auto-fill
+      }
       
       const userRes = await api.get(`/api/mobile/user/${encodeURIComponent(phoneNumber)}`);
       setUserExists(userRes.data.exists);
@@ -252,6 +259,17 @@ export default function MobileLogin() {
               <Phone size={14} className="text-teal-300/60" />
               Code sent to <span className="font-medium text-white">{phoneNumber}</span>
             </div>
+
+            {fallbackOtp && (
+              <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.06] p-4">
+                <p className="text-xs font-medium text-amber-300/80 uppercase tracking-wide mb-2">Twilio Trial — SMS not delivered</p>
+                <p className="text-sm text-slate-300 mb-3">Your number isn't verified on our Twilio trial account. Use this code instead:</p>
+                <div className="bg-[#060b18] border border-white/[0.06] rounded-xl px-4 py-3 text-center">
+                  <span className="text-2xl font-semibold text-teal-300 tracking-[0.4em] select-all">{fallbackOtp}</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">This code has been auto-filled below.</p>
+              </div>
+            )}
             
             <div className="space-y-1.5">
               <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Verification Code</label>

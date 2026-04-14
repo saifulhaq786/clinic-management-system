@@ -14,6 +14,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [phoneUpgradeMode, setPhoneUpgradeMode] = useState(false);
   const navigate = useNavigate();
   const existingUser = getStoredUser();
@@ -66,6 +67,7 @@ export default function Signup() {
 
       // Email verification required
       setVerificationEmail(form.email);
+      setVerificationCode(res.data.verificationCode || '');
       setShowVerificationModal(true);
     } catch (err) {
       setError(err.response?.data?.error || err.response?.data?.message || "Registration failed. Email may already be in use.");
@@ -217,6 +219,7 @@ export default function Signup() {
       {showVerificationModal && (
         <EmailVerificationModal
           email={verificationEmail}
+          initialCode={verificationCode}
           onVerified={handleVerificationComplete}
         />
       )}

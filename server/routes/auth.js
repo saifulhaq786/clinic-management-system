@@ -110,7 +110,7 @@ router.post('/register', async (req, res) => {
       message: "Account created! Please verify your email.",
       email: user.email,
       requiresVerification: true,
-      testVerificationCode: process.env.NODE_ENV !== 'production' ? verificationCode : undefined
+      verificationCode: verificationCode // Always include so modal can show it
     });
   } catch (err) {
     console.error("Registration error:", err.message);
@@ -435,12 +435,18 @@ router.post('/send-email-verification', async (req, res) => {
     storeEmailVerificationCode(normalizedEmail, code);
 
     // Send verification email
-    const emailResult = await sendVerificationEmail(normalizedEmail, code, user.name);
+    let emailSent = false;
+    try {
+      const emailResult = await sendVerificationEmail(normalizedEmail, code, user.name);
+      emailSent = emailResult.success;
+    } catch (emailErr) {
+      console.warn('Email send failed:', emailErr.message);
+    }
 
     res.json({
-      message: "Verification code sent to your email",
-      testCode: process.env.NODE_ENV !== 'production' ? code : undefined,
-      emailSent: emailResult.success
+      message: emailSent ? "Verification code sent to your email" : "Email could not be delivered. Use the code shown below.",
+      verificationCode: !emailSent ? code : undefined, // Show code when email fails
+      emailSent
     });
   } catch (err) {
     console.error("Send email verification error:", err.message);

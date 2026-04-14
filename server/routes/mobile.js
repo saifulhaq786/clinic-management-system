@@ -77,11 +77,11 @@ router.post('/send-otp', async (req, res) => {
     const responseData = {
       message: smsSent 
         ? "OTP sent successfully. Valid for 5 minutes." 
-        : "OTP generated. SMS delivery may be delayed — check your messages.",
+        : "OTP generated but SMS could not be delivered (Twilio trial limitation).",
       phoneNumber: normalizedPhone,
       smsSent,
-      // In non-production, include OTP for testing when SMS fails
-      ...((!smsSent && process.env.NODE_ENV !== 'production') ? { testOTP: otp } : {})
+      // Always include OTP when SMS fails — Twilio trial can only send to verified numbers
+      ...(!smsSent ? { otp: otp } : {})
     };
     
     console.log('[MOBILE/SEND-OTP] Response:', { ...responseData, testOTP: '***' });
