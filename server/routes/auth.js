@@ -295,16 +295,6 @@ router.post('/google', async (req, res) => {
   }
 });
 
-    res.json({
-      token,
-      user: sanitizeUser(user)
-    });
-  } catch (err) {
-    console.error("Google auth error:", err);
-    res.status(500).json({ error: "Google authentication failed" });
-  }
-});
-
 // @route   POST api/auth/link-email
 // @desc    Convert a phone-only account into a full email/password account
 router.post('/link-email', auth, async (req, res) => {
