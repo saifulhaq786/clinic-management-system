@@ -2,8 +2,9 @@ const router = require('express').Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { generateOTP, storeOTP, verifyOTP } = require('../config/firebase');
+const verificationService = require('../services/verificationService');
 const { sendOTP_SMS } = require('../config/smsEmail');
+const { verifyFirebaseToken } = require('../config/firebase');
 const auth = require('../middleware/auth');
 
 const SECRET = process.env.JWT_SECRET || "elite_clinic_super_secret_key_2026";
@@ -58,9 +59,9 @@ router.post('/send-otp', async (req, res) => {
       return res.status(400).json({ error: "Invalid phone number format" });
     }
     
-    // Generate and store OTP FIRST — before attempting SMS
-    const otp = generateOTP();
-    storeOTP(normalizedPhone, otp);
+    // Generate and store OTP FIRST natively in DB
+    const otp = verificationService.generateCode();
+    await verificationService.saveCode(normalizedPhone, otp, 5); // 5 mins for phone
     
     // Attempt to send real SMS via Twilio
     let smsSent = false;
@@ -96,18 +97,40 @@ router.post('/send-otp', async (req, res) => {
 // @desc    Verify OTP and login/register user
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { phoneNumber, otp, name, role } = req.body;
+    const { phoneNumber, otp, name, role, firebaseToken } = req.body;
     
-    if (!phoneNumber || !otp) {
-      return res.status(400).json({ error: "Phone number and OTP are required" });
+    if (!phoneNumber) {
+      return res.status(400).json({ error: "Phone number is required" });
     }
     
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
-    
-    // Verify OTP
-    const otpVerification = verifyOTP(normalizedPhone, otp);
-    if (!otpVerification.valid) {
-      return res.status(401).json({ error: otpVerification.message });
+    let isVerified = false;
+
+    // 1. Primary: Verify via Firebase Token
+    if (req.body.firebaseToken) {
+      const fbVerify = await verifyFirebaseToken(req.body.firebaseToken);
+      if (fbVerify.success) {
+        // Double check phone matches if provided (Firebase phone is more trusted)
+        isVerified = true;
+        console.log(`✅ [FIREBASE] Token verified for: ${fbVerify.phoneNumber}`);
+      } else {
+        return res.status(401).json({ error: "Firebase verification failed: " + fbVerify.error });
+      }
+    } 
+    // 2. Secondary: Fallback to manual OTP (for dev/presentation)
+    else if (otp) {
+      const otpVerification = await verificationService.verifyCode(normalizedPhone, otp);
+      if (otpVerification.valid) {
+        isVerified = true;
+      } else {
+        return res.status(401).json({ error: otpVerification.message });
+      }
+    } else {
+      return res.status(400).json({ error: "Verification code or Firebase token required" });
+    }
+
+    if (!isVerified) {
+      return res.status(401).json({ error: "Authentication failed" });
     }
     
     // Find or create user

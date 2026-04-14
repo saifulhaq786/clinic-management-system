@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const auth = require('../middleware/auth');
 const { sendVerificationEmail, sendWelcomeEmail } = require('../config/smsEmail');
+const verificationService = require('../services/verificationService');
+const { verifyFirebaseToken } = require('../config/firebase');
 
 // Use consistent JWT secret
 const SECRET = process.env.JWT_SECRET || "elite_clinic_super_secret_key_2026";
@@ -37,7 +39,7 @@ const createAuthToken = (user) => jwt.sign(
 // @route   POST api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role, location, specialty } = req.body;
+    const { name, email, password, role, location, specialty, firebaseUid } = req.body;
     
     // Validation
     if (!name || !email || !password || !role) {
@@ -68,6 +70,7 @@ router.post('/register', async (req, res) => {
       role, 
       location, 
       specialty,
+      firebaseUid, // Link to Firebase Account
       isVerified: false,
       emailVerificationRequired: true // Flag for new registrations
     });
@@ -76,10 +79,9 @@ router.post('/register', async (req, res) => {
     
     console.log(`User registered: ${normalizedEmail}`);
     
-    // Generate a purely random OTP securely
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    user.verificationCode = verificationCode;
-    await user.save();
+    // Generate and save code natively in DB
+    const verificationCode = verificationService.generateCode();
+    await verificationService.saveCode(normalizedEmail, verificationCode, 15); // 15 mins expiry
     
     let emailSent = false;
     try {
@@ -124,6 +126,36 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// @route   POST api/auth/sync-verification
+// @desc    Verify Firebase ID token and mark user as verified in MongoDB
+router.post('/sync-verification', async (req, res) => {
+  try {
+    const { firebaseToken } = req.body;
+    if (!firebaseToken) return res.status(400).json({ error: "No token provided" });
+
+    const fbVerify = await verifyFirebaseToken(firebaseToken);
+    if (!fbVerify.success) {
+      return res.status(401).json({ error: "Invalid Firebase token" });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { email: fbVerify.email || fbVerify.phoneNumber }, // Support both
+      { isVerified: true, emailVerificationRequired: false },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      success: true,
+      user: sanitizeUser(user),
+      token: createAuthToken(user)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // @route   POST api/auth/login
 router.post('/login', async (req, res) => {
   try {
@@ -159,9 +191,8 @@ router.post('/login', async (req, res) => {
     // Check if user has verified their email (NEW registrations only)
     if (!user.isVerified && user.emailVerificationRequired) {
       // Generate a fresh verification code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      user.verificationCode = code;
-      await user.save();
+      const code = verificationService.generateCode();
+      await verificationService.saveCode(normalizedEmail, code, 15);
       
       // Try sending email (may fail on cloud servers)
       let emailSent = false;
@@ -438,10 +469,9 @@ router.post('/send-email-verification', async (req, res) => {
     }
 
     // Generate fresh code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    user.verificationCode = code;
-    await user.save();
-
+    const code = verificationService.generateCode();
+    await verificationService.saveCode(normalizedEmail, code, 15);
+    
     // Send verification email
     let emailSent = false;
     try {
@@ -474,18 +504,19 @@ router.post('/verify-email-code', async (req, res) => {
 
     const normalizedEmail = email.toLowerCase().trim();
     
+    const verification = await verificationService.verifyCode(normalizedEmail, code);
+    
+    if (!verification.valid) {
+      return res.status(401).json({ error: verification.message });
+    }
+
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.verificationCode !== code && code !== '123456') { // Allow universal dev fallback
-      return res.status(401).json({ error: "Invalid verification code. Please try again." });
-    }
-
     user.isVerified = true;
     user.emailVerificationRequired = false;
-    user.verificationCode = null;
     await user.save();
 
     // DB update already completed inline completely.

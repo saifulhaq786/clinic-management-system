@@ -16,9 +16,10 @@ export default function Dashboard() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [uploadAptId, setUploadAptId] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [successMsg, setSuccessMsg] = useState('');
   
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user'));
+  const user = getStoredUser();
   const token = localStorage.getItem('token');
 
   useEffect(() => {
@@ -33,6 +34,11 @@ export default function Dashboard() {
       setShowProfileModal(true);
     }
   }, [navigate, token]);
+
+  const showSuccess = (msg) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
 
   const fetchData = async () => {
     try {
@@ -70,6 +76,7 @@ export default function Dashboard() {
       await api.patch(`/api/appointments/${id}`, { status }, { 
         headers: { Authorization: `Bearer ${token}` } 
       });
+      showSuccess(`Status updated to ${status}`);
       fetchData();
     } catch (err) { console.error("Status update failed", err); }
   };
@@ -108,6 +115,16 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(20,184,166,0.04) 0%, transparent 60%), #060b18' }}>
+      {/* Toast Notification */}
+      {successMsg && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] animate-fadeIn">
+          <div className="bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-2xl shadow-emerald-500/20 font-bold flex items-center gap-3 border border-emerald-400/20 backdrop-blur-md">
+            <Check size={18} />
+            {successMsg}
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <header className="border-b border-white/[0.04] bg-[#060b18]/80 backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">

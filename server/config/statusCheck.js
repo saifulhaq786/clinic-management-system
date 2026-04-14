@@ -10,36 +10,41 @@ const checkCredentials = () => {
                          process.env.EMAIL_PASSWORD &&
                          !process.env.EMAIL_USER.includes('your-email');
 
-  const smsConfigured = process.env.TWILIO_ACCOUNT_SID && 
-                       process.env.TWILIO_AUTH_TOKEN &&
-                       !process.env.TWILIO_ACCOUNT_SID.includes('your_twilio');
+  const firebaseConfigured = process.env.VITE_FIREBASE_API_KEY && 
+                             process.env.FIREBASE_PROJECT_ID &&
+                             !process.env.VITE_FIREBASE_API_KEY.includes('your_firebase');
+
+  const googleConfigured = process.env.GOOGLE_CLIENT_ID && 
+                           !process.env.GOOGLE_CLIENT_ID.includes('google_client');
 
   // Email Status
   console.log('📧 EMAIL CONFIGURATION:');
   if (emailConfigured) {
     console.log(`  ✅ Gmail: CONFIGURED (${process.env.EMAIL_USER})`);
   } else {
-    console.log(`  ❌ Gmail: NOT CONFIGURED - Placeholder values detected`);
-    console.log('     Update .env with real Gmail credentials');
+    console.log(`  ❌ Gmail: NOT CONFIGURED`);
   }
 
-  // SMS Status
-  console.log('\n📱 SMS CONFIGURATION:');
-  if (smsConfigured) {
-    console.log(`  ✅ Twilio: CONFIGURED (SID: ${process.env.TWILIO_ACCOUNT_SID.slice(0, 6)}...)`);
+  // Auth Status (Social & SMS)
+  console.log('\n🚀 AUTHENTICATION SUITE:');
+  if (firebaseConfigured) {
+    console.log(`  ✅ Firebase (SMS/Email Link): CONFIGURED (${process.env.FIREBASE_PROJECT_ID})`);
   } else {
-    console.log(`  ❌ Twilio: NOT CONFIGURED - Placeholder values detected`);
-    console.log('     Update .env with real Twilio credentials');
+    console.log(`  ❌ Firebase: NOT CONFIGURED`);
+  }
+
+  if (googleConfigured) {
+    console.log(`  ✅ Google Login: CONFIGURED (${process.env.GOOGLE_CLIENT_ID.slice(0, 15)}...)`);
+  } else {
+    console.log(`  ❌ Google Login: NOT CONFIGURED`);
   }
 
   // Overall Status
   console.log('\n' + '-'.repeat(60));
-  if (emailConfigured && smsConfigured) {
-    console.log('✅ ALL SYSTEMS READY - Real SMS & Email should work!');
-  } else if (emailConfigured || smsConfigured) {
-    console.log('⚠️  PARTIAL CONFIG - Add missing credentials to .env');
+  if (emailConfigured && firebaseConfigured && googleConfigured) {
+    console.log('✅ ELITE CLINIC READY - Premium Auth Suite Active!');
   } else {
-    console.log('❌ NOT CONFIGURED - See CREDENTIALS_SETUP.md for instructions');
+    console.log('⚠️  PARTIAL CONFIG - Check your .env file credentials');
   }
   console.log('-'.repeat(60) + '\n');
 };

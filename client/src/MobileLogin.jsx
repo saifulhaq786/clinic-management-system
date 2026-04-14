@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, ArrowLeft, Check, Smartphone, Phone } from 'lucide-react';
+import { MessageCircle, ArrowLeft, Check, Smartphone, Phone, User, Activity } from 'lucide-react';
 import api from './api';
 import AuthShell from './components/AuthShell';
 import { persistSession } from './authSession';
+import { auth } from './firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 
 export default function MobileLogin() {
   const [stage, setStage] = useState('phone'); // 'phone' | 'otp' | 'newuser'
@@ -17,6 +19,8 @@ export default function MobileLogin() {
   const [success, setSuccess] = useState('');
   const [userExists, setUserExists] = useState(false);
   const [fallbackOtp, setFallbackOtp] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [firebaseToken, setFirebaseToken] = useState('');
   
   const navigate = useNavigate();
 
@@ -64,26 +68,27 @@ export default function MobileLogin() {
         return;
       }
 
-      const res = await api.post('/api/mobile/send-otp', { phoneNumber });
-
-      setSuccess(res.data.message || 'OTP sent. Valid for 5 minutes.');
-      
-      // If SMS couldn't be delivered, server returns the OTP directly
-      if (res.data.otp) {
-        setFallbackOtp(res.data.otp);
-        setOtp(res.data.otp); // auto-fill
+      // 1. Initialize Recaptcha
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible',
+          'callback': () => {}
+        });
       }
+
+      // 2. Send OTP via Firebase
+      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+      setConfirmationResult(confirmation);
       
+      // 3. Mark if user exists for later
       const userRes = await api.get(`/api/mobile/user/${encodeURIComponent(phoneNumber)}`);
       setUserExists(userRes.data.exists);
-      
+
+      setSuccess("Verification code sent to your phone!");
       setStage('otp');
     } catch (err) {
-      if (!err.response && err.message?.includes('Network Error')) {
-        setError('Server is starting up. Please wait 30 seconds and try again.');
-      } else {
-        setError(err.response?.data?.error || err.message || 'Failed to send OTP');
-      }
+      console.error("Firebase Auth Error:", err);
+      setError(err.message || "Failed to send verification code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -96,17 +101,26 @@ export default function MobileLogin() {
     setError('');
 
     try {
-      if (!userExists) {
+      // 1. Verify OTP with Firebase
+      const result = await confirmationResult.confirm(otp);
+      const idToken = await result.user.getIdToken();
+      
+      if (userExists) {
+        // Log in existing user
+        const loginRes = await api.post('/api/mobile/verify-otp', { 
+          phoneNumber, 
+          firebaseToken: idToken 
+        });
+        persistSession(loginRes.data.user, loginRes.data.token);
+        navigate('/dashboard');
+      } else {
+        // Move to profile step for new user
         setStage('newuser');
-        setLoading(false);
-        return;
+        setFirebaseToken(idToken);
       }
-
-      const res = await api.post('/api/mobile/verify-otp', { phoneNumber, otp });
-      persistSession(res.data);
-      navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'OTP verification failed');
+      console.error("Verification error:", err);
+      setError("Invalid or expired verification code.");
     } finally {
       setLoading(false);
     }
@@ -119,8 +133,13 @@ export default function MobileLogin() {
     setError('');
 
     try {
-      const res = await api.post('/api/mobile/verify-otp', { phoneNumber, otp, name, role });
-      persistSession(res.data);
+      const res = await api.post('/api/mobile/verify-otp', { 
+        phoneNumber, 
+        firebaseToken, 
+        name, 
+        role 
+      });
+      persistSession(res.data.user, res.data.token);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed');
@@ -135,6 +154,7 @@ export default function MobileLogin() {
       title="Fast mobile access with clinical-grade security."
       description="Sign in with a one-time code sent to your phone. Add profile details later if needed."
     >
+      <div id="recaptcha-container"></div>
       {/* Back button */}
       {stage !== 'phone' && (
         <button
@@ -307,15 +327,41 @@ export default function MobileLogin() {
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-3">
               <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Account Type</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                <option value="patient">Patient</option>
-                <option value="doctor">Healthcare Professional</option>
-              </select>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('patient')}
+                  className={`flex flex-col items-start p-4 rounded-2xl border transition-all ${
+                    role === 'patient' 
+                    ? 'border-teal-500 bg-teal-500/10' 
+                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${role === 'patient' ? 'bg-teal-500 text-white' : 'bg-white/5 text-slate-400'}`}>
+                    <User size={18} />
+                  </div>
+                  <span className={`text-sm font-bold ${role === 'patient' ? 'text-white' : 'text-slate-400'}`}>Patient</span>
+                  <span className="text-[0.7rem] text-slate-500 mt-0.5">Seeking Care</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRole('doctor')}
+                  className={`flex flex-col items-start p-4 rounded-2xl border transition-all ${
+                    role === 'doctor' 
+                    ? 'border-teal-500 bg-teal-500/10' 
+                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${role === 'doctor' ? 'bg-teal-500 text-white' : 'bg-white/5 text-slate-400'}`}>
+                    <Activity size={18} />
+                  </div>
+                  <span className={`text-sm font-bold ${role === 'doctor' ? 'text-white' : 'text-slate-400'}`}>Doctor</span>
+                  <span className="text-[0.7rem] text-slate-500 mt-0.5">Providing Care</span>
+                </button>
+              </div>
             </div>
 
             <button

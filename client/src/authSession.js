@@ -1,6 +1,6 @@
 export const persistSession = ({ token, user }) => {
-  localStorage.setItem('token', token);
-  localStorage.setItem('user', JSON.stringify(user));
+  if (token) localStorage.setItem('token', token);
+  if (user) localStorage.setItem('user', JSON.stringify(user));
 };
 
 export const getStoredUser = () => {

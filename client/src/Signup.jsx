@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronLeft, MailPlus, ShieldCheck, MapPin } from 'lucide-react';
-import EmailVerificationModal from './EmailVerificationModal';
+import { CheckCircle2, ChevronLeft, MailPlus, ShieldCheck, MapPin, User, Activity, AlertCircle, Check } from 'lucide-react';
 import api from './api';
 import AuthShell from './components/AuthShell';
 import GoogleAuthButton from './components/GoogleAuthButton';
+import { auth } from './firebase';
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth';
 import { getStoredUser, isPhoneOnlyAccount, persistSession } from './authSession';
 
 export default function Signup() {
@@ -12,9 +13,8 @@ export default function Signup() {
   const [coords, setCoords] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [success, setSuccess] = useState('');
   const [verificationEmail, setVerificationEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
   const [phoneUpgradeMode, setPhoneUpgradeMode] = useState(false);
   const navigate = useNavigate();
   const existingUser = getStoredUser();
@@ -40,37 +40,34 @@ export default function Signup() {
     setLoading(true);
     setError('');
     try {
+      // 1. Create user in Firebase first
+      const fbUserCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      const fbUser = fbUserCredential.user;
+      
+      // 2. Send professional verification link
+      await sendEmailVerification(fbUser);
+      
+      // 3. Register in our MongoDB
       const payload = {
         ...form,
+        firebaseUid: fbUser.uid,
         location: { type: 'Point', coordinates: coords }
       };
+      
       const res = phoneUpgradeMode && token
         ? await api.post('/api/auth/link-email', payload, {
             headers: { Authorization: `Bearer ${token}` }
           })
         : await api.post('/api/auth/register', payload);
       
-      console.log('Registration response:', res.data);
-
-      if (phoneUpgradeMode) {
-        persistSession(res.data);
-        navigate('/dashboard');
-        return;
-      }
-
-      // If server auto-verified (email service unavailable), go straight to dashboard
-      if (res.data.token && !res.data.requiresVerification) {
-        persistSession(res.data);
-        navigate('/dashboard');
-        return;
-      }
-
-      // Email verification required
-      setVerificationEmail(form.email);
-      setVerificationCode(res.data.verificationCode || '');
-      setShowVerificationModal(true);
+      setSuccess(`Account created! A verification link has been sent to ${form.email}. Please verify your email before logging in.`);
+      window.scrollTo(0, 0); // Show success message at top
     } catch (err) {
-      setError(err.response?.data?.error || err.response?.data?.message || "Registration failed. Email may already be in use.");
+      console.error('Signup error:', err);
+      let msg = "Registration failed.";
+      if (err.code === 'auth/email-already-in-use') msg = "This email is already registered.";
+      if (err.code === 'auth/weak-password') msg = "Password is too weak.";
+      setError(err.response?.data?.error || err.response?.data?.message || msg);
     } finally {
       setLoading(false);
     }
@@ -78,7 +75,6 @@ export default function Signup() {
 
   const handleVerificationComplete = (userData) => {
     persistSession(userData);
-    setShowVerificationModal(false);
     navigate('/dashboard');
   };
 
@@ -88,7 +84,27 @@ export default function Signup() {
       title={phoneUpgradeMode ? "Add a secure email login to your phone account." : "Join a platform built for premium patient care."}
       description={phoneUpgradeMode ? "You already have a verified phone-based profile. Finish setup with a professional email and password so you can sign in any way you prefer." : "Set up your credentials and start managing appointments, records, and communication in one place."}
     >
-      {/* Back button */}
+      <div className="space-y-4">
+        {error && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-400/15 bg-red-500/[0.06] px-4 py-3 text-sm text-red-300 animate-slide-in">
+            <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-emerald-400/15 bg-emerald-500/[0.06] px-4 py-3 text-sm text-emerald-300 animate-slide-in">
+            <Check size={16} className="mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-bold">{success}</p>
+              <button onClick={() => navigate('/login')} className="mt-2 text-xs text-white bg-emerald-600 px-3 py-1.5 rounded-lg hover:bg-emerald-500 transition">
+                Return to Login
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Back button */}
       <button
         onClick={() => navigate('/login')}
         className="mb-6 flex items-center gap-1.5 text-sm text-slate-400 transition hover:text-white"
@@ -152,15 +168,41 @@ export default function Signup() {
           />
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-3">
           <label className="text-xs font-medium tracking-wide text-slate-400 uppercase">Account Type</label>
-          <select
-            value={form.role}
-            onChange={e => setForm({...form, role: e.target.value})}
-          >
-            <option value="patient">I am a Patient</option>
-            <option value="doctor">I am a Healthcare Professional</option>
-          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setForm({...form, role: 'patient'})}
+              className={`flex flex-col items-start p-4 rounded-2xl border transition-all ${
+                form.role === 'patient' 
+                ? 'border-teal-500 bg-teal-500/10' 
+                : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${form.role === 'patient' ? 'bg-teal-500 text-white' : 'bg-white/5 text-slate-400'}`}>
+                <User size={18} />
+              </div>
+              <span className={`text-sm font-bold ${form.role === 'patient' ? 'text-white' : 'text-slate-400'}`}>Patient</span>
+              <span className="text-[0.7rem] text-slate-500 mt-0.5">Seeking Care</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setForm({...form, role: 'doctor'})}
+              className={`flex flex-col items-start p-4 rounded-2xl border transition-all ${
+                form.role === 'doctor' 
+                ? 'border-teal-500 bg-teal-500/10' 
+                : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${form.role === 'doctor' ? 'bg-teal-500 text-white' : 'bg-white/5 text-slate-400'}`}>
+                <Activity size={18} />
+              </div>
+              <span className={`text-sm font-bold ${form.role === 'doctor' ? 'text-white' : 'text-slate-400'}`}>Doctor</span>
+              <span className="text-[0.7rem] text-slate-500 mt-0.5">Providing Care</span>
+            </button>
+          </div>
         </div>
 
         {form.role === 'doctor' && (
@@ -216,13 +258,7 @@ export default function Signup() {
         </button>
       </div>
 
-      {showVerificationModal && (
-        <EmailVerificationModal
-          email={verificationEmail}
-          initialCode={verificationCode}
-          onVerified={handleVerificationComplete}
-        />
-      )}
+      </div>
     </AuthShell>
   );
 }

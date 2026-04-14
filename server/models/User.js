@@ -24,8 +24,11 @@ const userSchema = new mongoose.Schema({
   // Auth & Verification
   isVerified: { type: Boolean, default: false },
   emailVerificationRequired: { type: Boolean, default: false },
-  verificationCode: { type: String, default: null },
+  verificationCode: { type: String, default: null }, // Email
+  phoneOTP: { type: String, default: null }, // Phone
+  otpExpiry: { type: Date, default: null }, // Shared expiry for current verification logic
   googleId: { type: String, default: null },
+  firebaseUid: { type: String, default: null, unique: true, sparse: true },
   avatar: { type: String, default: null },
   
   // Location
@@ -39,6 +42,5 @@ const userSchema = new mongoose.Schema({
 
 userSchema.index({ location: "2dsphere" });
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
-userSchema.index({ phone: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('User', userSchema);
