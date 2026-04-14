@@ -52,16 +52,20 @@ let emailTransporter = null;
 
 // Initialize email transporter with Gmail SMTP settings
 if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+  // Use explicit SMTP settings for better compatibility on cloud platforms like Render
   emailTransporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use STARTTLS (port 587)
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD
     },
-    tls: { rejectUnauthorized: false },
-    connectionTimeout: 10000, // 10s to connect
-    greetingTimeout: 10000,   // 10s for SMTP greeting
-    socketTimeout: 15000,     // 15s for socket idle
+    tls: { 
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2'
+    },
+    connectionTimeout: 10000, 
   });
 
   // Verify connection
