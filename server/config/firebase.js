@@ -3,10 +3,11 @@ const admin = require('firebase-admin');
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
   try {
+    const projectId = process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || "elite-clinic-demo";
     admin.initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID || "elite-clinic-demo"
+      projectId: projectId
     });
-    console.log('✅ [FIREBASE] Admin SDK initialized successfully');
+    console.log(`✅ [FIREBASE] Admin SDK initialized successfully. Project: ${projectId}`);
   } catch (err) {
     console.error('❌ [FIREBASE] Admin SDK initialization failed:', err.message);
   }

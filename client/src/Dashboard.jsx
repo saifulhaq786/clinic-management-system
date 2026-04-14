@@ -24,6 +24,14 @@ export default function Dashboard() {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
+    // Diagnostic log for the 'Nuclear Fix'
+    console.log('🔍 [DASHBOARD] Session Diagnostic:', { 
+      tokenExists: !!localStorage.getItem('token'),
+      userExists: !!user,
+      userId: user?.id,
+      role: user?.role 
+    });
+
     // Provide a small grace period for the token to settle in localStorage
     const storedToken = localStorage.getItem('token');
     if (!storedToken && !token) {

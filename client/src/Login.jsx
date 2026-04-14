@@ -9,12 +9,20 @@ import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth
 import { persistSession } from './authSession';
 
 export default function Login() {
+  const [coords, setCoords] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [verificationEmail, setVerificationEmail] = useState('');
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (p) => setCoords({ type: 'Point', coordinates: [p.coords.longitude, p.coords.latitude] }),
+      () => console.log("Location access denied. Some features may be limited.")
+    );
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -133,7 +141,7 @@ export default function Login() {
 
       {/* Google */}
       <div className="mt-6">
-        <GoogleAuthButton setError={setError} />
+        <GoogleAuthButton setError={setError} location={coords} />
       </div>
 
       {/* Links */}

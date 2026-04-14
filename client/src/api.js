@@ -5,8 +5,20 @@ const productionBaseUrl = 'https://clinic-management-system-jwqg.onrender.com';
 
 const api = axios.create({
   baseURL: configuredBaseUrl || (import.meta.env.DEV ? 'http://localhost:5001' : productionBaseUrl),
-  timeout: 60000, // 60s timeout — Render free tier cold-starts are slow
+  timeout: 60000,
 });
+
+// CRITICAL: Base request interceptor to attach 'token'
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Retry once on network errors (cold-start resilience)
 api.interceptors.response.use(

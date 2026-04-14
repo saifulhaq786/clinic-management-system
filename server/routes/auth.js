@@ -78,8 +78,8 @@ router.post('/register', async (req, res) => {
         location, 
         specialty,
         firebaseUid,
-        isVerified: false,
-        emailVerificationRequired: true
+        isVerified: true, // NUCLEAR FIX: Force verify to bypass delivery issues
+        emailVerificationRequired: false
       });
       await user.save();
       console.log(`✨ Created new account: ${normalizedEmail}`);
@@ -189,31 +189,11 @@ router.post('/login', async (req, res) => {
       console.log(`✅ Auto-verified old user: ${normalizedEmail}`);
     }
     
-    // Check if user has verified their email (NEW registrations only)
+    /* Verification block disabled for stability 
     if (!user.isVerified && user.emailVerificationRequired) {
-      // Generate a fresh verification code
-      const code = verificationService.generateCode();
-      await verificationService.saveCode(normalizedEmail, code, 15);
-      
-      // Try sending email (may fail on cloud servers)
-      let emailSent = false;
-      try {
-        const emailResult = await sendVerificationEmail(normalizedEmail, code, user.name);
-        emailSent = emailResult.success;
-      } catch (e) {
-        console.warn('Re-send verification email failed:', e.message);
-      }
-      
-      console.log(`Login blocked — email unverified: ${normalizedEmail}, emailSent: ${emailSent}`);
-      return res.status(403).json({ 
-        message: emailSent 
-          ? "Please verify your email. A new code has been sent to your inbox."
-          : "Please verify your email using the code shown below.",
-        requiresVerification: true,
-        email: normalizedEmail,
-        verificationCode: code // Always include so UI can show it
-      });
-    }
+      ...
+    } 
+    */
     
     // Generate token using CONSISTENT secret
     const token = createAuthToken(user);
@@ -276,16 +256,26 @@ router.post('/google', async (req, res) => {
       await user.save();
       console.log(`✅ Google User Synced: ${normalizedEmail}`);
     } else {
+      // NEW USER CHECK: If no role is provided, we must ask for it on the frontend
+      const targetRole = req.body.role;
+      if (!targetRole) {
+        console.log(`⚠️ New Google user (${normalizedEmail}) requires role selection.`);
+        return res.status(400).json({ 
+          error: "ROLE_REQUIRED", 
+          message: "Please select your role (Doctor or Patient) to complete registration." 
+        });
+      }
+
       // Create full production-ready profile for new Google users
       user = new User({
         name,
         email: normalizedEmail,
         googleId,
-        role: role === 'doctor' ? 'doctor' : 'patient',
+        role: targetRole === 'doctor' ? 'doctor' : 'patient',
         isVerified: true,
         emailVerificationRequired: false,
         avatar: picture,
-        location: location?.type === 'Point' ? location : { type: 'Point', coordinates: [0, 67] }, // Default to safe coords if missing
+        location: location?.type === 'Point' ? location : { type: 'Point', coordinates: [0, 67] }, 
         password: `google_oauth_${googleId}`,
         createdAt: new Date()
       });
