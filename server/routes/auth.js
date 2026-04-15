@@ -109,11 +109,12 @@ router.post('/register', async (req, res) => {
       });
     }
     
+    // Always return the session immediately (Nuclear Sync)
     res.status(201).json({ 
-      message: "Registration successful! Verification email sent.",
-      email: user.email,
-      requiresVerification: true,
-      verificationCode: verificationCode 
+      message: "Registration successful!",
+      token: createAuthToken(user),
+      user: sanitizeUser(user),
+      requiresVerification: false
     });
   } catch (err) {
     console.error("Registration error:", err.message);
@@ -213,6 +214,9 @@ router.post('/google', async (req, res) => {
     const { credential, accessToken, role, location } = req.body;
     let payload;
     if (credential) {
+      if (!googleClient) {
+        return res.status(503).json({ error: "Google login is not configured on the server." });
+      }
       const ticket = await googleClient.verifyIdToken({
         idToken: credential,
         audience: process.env.GOOGLE_CLIENT_ID
@@ -220,11 +224,20 @@ router.post('/google', async (req, res) => {
       payload = ticket.getPayload();
     } else if (accessToken) {
       const axios = require('axios');
-      const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      payload = response.data;
-      payload.email_verified = true;
+      try {
+        const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        payload = response.data;
+      } catch (googleErr) {
+        const status = googleErr.response?.status || 500;
+        const detail = googleErr.response?.data?.error_description ||
+          googleErr.response?.data?.error ||
+          googleErr.message;
+        return res.status(status === 401 ? 401 : 502).json({
+          error: `Google profile lookup failed: ${detail}`
+        });
+      }
     } else {
       return res.status(400).json({ error: "Google credential or access token is required" });
     }
@@ -234,7 +247,7 @@ router.post('/google', async (req, res) => {
     }
 
     const normalizedEmail = payload.email.toLowerCase().trim();
-    const googleId = payload.sub;
+    const googleId = payload.sub || payload.id || payload.user_id || `google_${normalizedEmail}`;
     const name = payload.name || normalizedEmail.split('@')[0];
     const picture = payload.picture || null;
 
@@ -287,7 +300,11 @@ router.post('/google', async (req, res) => {
     res.json({ token, user: sanitizeUser(user) });
   } catch (err) {
     console.error("❌ Google Auth Backend Error:", err.message);
-    res.status(500).json({ error: "External authentication failed. Please try again or use manual sign up." });
+    res.status(500).json({
+      error: process.env.NODE_ENV === 'development'
+        ? `External authentication failed: ${err.message}`
+        : "External authentication failed. Please try again or use manual sign up."
+    });
   }
 });
 

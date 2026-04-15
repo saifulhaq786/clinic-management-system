@@ -106,11 +106,15 @@ router.post('/verify-otp', async (req, res) => {
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     let isVerified = false;
 
+    // 0. Emergency Bypass: Developer testing number
+    if (normalizedPhone === '+911234567890' && otp === '123456') {
+      isVerified = true;
+      console.log('🛡️ [EMERGENCY] Bypass triggered for developer test number');
+    }
     // 1. Primary: Verify via Firebase Token
-    if (req.body.firebaseToken) {
+    else if (req.body.firebaseToken) {
       const fbVerify = await verifyFirebaseToken(req.body.firebaseToken);
       if (fbVerify.success) {
-        // Double check phone matches if provided (Firebase phone is more trusted)
         isVerified = true;
         console.log(`✅ [FIREBASE] Token verified for: ${fbVerify.phoneNumber}`);
       } else {

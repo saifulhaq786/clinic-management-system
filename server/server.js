@@ -9,6 +9,7 @@ const setupSocket = require('./config/socket');
 
 const app = express();
 const server = http.createServer(app);
+const isProduction = process.env.NODE_ENV === 'production';
 
 // CRITICAL for Render/Proxies: Correctly identify user IP
 app.set('trust proxy', 1);
@@ -35,15 +36,26 @@ const limiter = rateLimit({
   max: 500, // Increased for stability
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => !isProduction || req.path.startsWith('/api/auth') || req.path.startsWith('/api/mobile'),
   message: { error: 'Too many requests. Please try again in a few minutes.' }
 });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100, // Increased for launch testing
+  skip: () => !isProduction,
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many auth attempts. Please try again in a few minutes.' }
+});
+const mobileLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  skip: () => !isProduction,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many OTP attempts. Please wait a few minutes and try again.' }
 });
 app.use(limiter);
 
@@ -65,8 +77,17 @@ mongoose.connect(process.env.MONGO_URI)
 async function ensureIndexes() {
   try {
     const User = require('./models/User');
+    const indexes = await User.collection.indexes();
+    const firebaseUidIndex = indexes.find((index) => index.name === 'firebaseUid_1');
+
+    if (firebaseUidIndex && (!firebaseUidIndex.unique || !firebaseUidIndex.sparse)) {
+      await User.collection.dropIndex('firebaseUid_1');
+      console.log('Replaced outdated firebaseUid_1 index');
+    }
+
     await User.collection.createIndex({ email: 1 }, { unique: true, sparse: true });
     await User.collection.createIndex({ phone: 1 }, { unique: true, sparse: true });
+    await User.collection.createIndex({ firebaseUid: 1 }, { unique: true, sparse: true });
     await User.collection.createIndex({ location: '2dsphere' });
     console.log("DB indexes verified");
   } catch (err) {
@@ -83,7 +104,7 @@ app.set('io', io);
 
 // Route Integrations
 app.use('/api/auth', authLimiter, require('./routes/auth'));
-app.use('/api/mobile', require('./routes/mobile'));
+app.use('/api/mobile', mobileLimiter, require('./routes/mobile'));
 app.use('/api/profile', require('./routes/profile'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/chat', require('./routes/chat'));

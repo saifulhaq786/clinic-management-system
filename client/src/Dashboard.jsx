@@ -14,74 +14,82 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [nextAppointment, setNextAppointment] = useState(null);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [uploadAptId, setUploadAptId] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => getStoredUser());
+  const [showProfileModal, setShowProfileModal] = useState(() => {
+    const storedUser = getStoredUser();
+    return Boolean(storedUser && !storedUser.age && storedUser.phone);
+  });
   const [successMsg, setSuccessMsg] = useState('');
   
   const navigate = useNavigate();
-  const user = getStoredUser();
+  const user = currentUser;
   const token = localStorage.getItem('token');
+  const userId = user?.id;
+  const userRole = user?.role;
+  const userCoords = user?.location?.coordinates;
+  const userLng = userCoords?.[0];
+  const userLat = userCoords?.[1];
 
   useEffect(() => {
-    // Diagnostic log for the 'Nuclear Fix'
-    console.log('🔍 [DASHBOARD] Session Diagnostic:', { 
-      tokenExists: !!localStorage.getItem('token'),
-      userExists: !!user,
-      userId: user?.id,
-      role: user?.role 
-    });
+    if (!token || !userId) {
+      navigate('/login');
+      return;
+    }
+  }, [navigate, token, userId]);
 
-    // Provide a small grace period for the token to settle in localStorage
-    const storedToken = localStorage.getItem('token');
-    if (!storedToken && !token) {
-      const timer = setTimeout(() => {
-        if (!localStorage.getItem('token')) {
-          navigate('/login');
+  useEffect(() => {
+    if (!token || !userId) return;
+
+    let isCancelled = false;
+
+    const loadDashboardData = async () => {
+      try {
+        const aptRes = await api.get('/api/appointments/list', { 
+          headers: { Authorization: `Bearer ${token}` } 
+        });
+        if (isCancelled) return;
+        setAppointments(aptRes.data.filter(a => a.status !== 'completed'));
+
+        if (userRole === 'patient') {
+          const nextRes = await api.get(`/api/appointments/upcoming/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (isCancelled) return;
+          if (nextRes.data && nextRes.data._id) {
+            setNextAppointment(nextRes.data);
+          } else {
+            setNextAppointment(null);
+          }
         }
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-    
-    setCurrentUser(user);
-    if (storedToken || token) {
-      fetchData();
-    }
-    
-    if (user && !user.age && user.phone) {
-      setShowProfileModal(true);
-    }
-  }, [navigate, token, user]);
+
+        if (userRole === 'patient' && userCoords) {
+          const [lng, lat] = userCoords;
+          const clRes = await api.get(`/api/appointments/nearby?lng=${lng}&lat=${lat}`, { 
+            headers: { Authorization: `Bearer ${token}` } 
+          });
+          if (isCancelled) return;
+          setClinics(clRes.data);
+        } else if (!isCancelled) {
+          setClinics([]);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error("Data fetch error", err);
+        }
+      }
+    };
+
+    loadDashboardData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [token, userId, userRole, userCoords, userLng, userLat]);
 
   const showSuccess = (msg) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(''), 3000);
-  };
-
-  const fetchData = async () => {
-    try {
-      const aptRes = await api.get('/api/appointments/list', { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
-      setAppointments(aptRes.data.filter(a => a.status !== 'completed'));
-
-      if (user?.role === 'patient') {
-        const nextRes = await api.get(`/api/appointments/upcoming/${user.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (nextRes.data && nextRes.data._id) {
-          setNextAppointment(nextRes.data);
-        }
-      }
-
-      if (user?.role === 'patient' && user?.location?.coordinates) {
-        const [lng, lat] = user.location.coordinates;
-        const clRes = await api.get(`/api/appointments/nearby?lng=${lng}&lat=${lat}`, { 
-          headers: { Authorization: `Bearer ${token}` } 
-        });
-        setClinics(clRes.data);
-      }
-    } catch (err) { console.error("Data fetch error", err); }
   };
 
   const filteredClinics = clinics.filter(doctor =>
@@ -95,7 +103,7 @@ export default function Dashboard() {
         headers: { Authorization: `Bearer ${token}` } 
       });
       showSuccess(`Status updated to ${status}`);
-      fetchData();
+      window.location.reload();
     } catch (err) { console.error("Status update failed", err); }
   };
 
@@ -111,7 +119,7 @@ export default function Dashboard() {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert('✅ Payment successful!');
-      fetchData(); // Refresh UI
+      window.location.reload();
     } catch (err) {
       alert('❌ Payment failed: ' + (err.response?.data?.error || err.message));
     }
@@ -120,11 +128,6 @@ export default function Dashboard() {
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
-  };
-
-  const handleProfileComplete = (updatedUser) => {
-    setCurrentUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   if (!user) return null;
@@ -324,8 +327,7 @@ export default function Dashboard() {
                 appointments.map((apt, i) => (
                   <div 
                     key={apt._id} 
-                    className="rounded-2xl border border-white/[0.04] bg-white/[0.015] p-5 transition-all duration-200 hover:border-white/[0.08] group animate-fade-in"
-                    style={{ animationDelay: `${i * 50}ms` }}
+                    className="rounded-2xl border border-white/[0.04] bg-white/[0.015] p-5 transition-all duration-200 hover:border-white/[0.08] group"
                   >
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -403,7 +405,7 @@ export default function Dashboard() {
                             appointmentId={apt._id} 
                             onSave={() => {
                               setUploadAptId(null);
-                              fetchData();
+                              window.location.reload();
                             }} 
                           />
                         </div>
@@ -424,7 +426,7 @@ export default function Dashboard() {
           onClose={() => setSelectedDoc(null)}
           onBook={() => {
             setSelectedDoc(null);
-            fetchData();
+            window.location.reload();
           }}
         />
       )}

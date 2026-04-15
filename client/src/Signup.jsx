@@ -4,24 +4,20 @@ import { CheckCircle2, ChevronLeft, MailPlus, ShieldCheck, MapPin, User, Activit
 import api from './api';
 import AuthShell from './components/AuthShell';
 import GoogleAuthButton from './components/GoogleAuthButton';
-import { auth } from './firebase';
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth';
-import { getStoredUser, isPhoneOnlyAccount, persistSession } from './authSession';
+import { getStoredUser, isPhoneOnlyAccount } from './authSession';
 
 export default function Signup() {
+  const existingUser = getStoredUser();
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'patient', specialty: 'General' });
   const [coords, setCoords] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [verificationEmail, setVerificationEmail] = useState('');
-  const [phoneUpgradeMode, setPhoneUpgradeMode] = useState(false);
+  const [phoneUpgradeMode] = useState(() => isPhoneOnlyAccount(existingUser));
   const navigate = useNavigate();
-  const existingUser = getStoredUser();
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    setPhoneUpgradeMode(isPhoneOnlyAccount(existingUser));
     navigator.geolocation.getCurrentPosition(
       (p) => setCoords([p.coords.longitude, p.coords.latitude]),
       () => {
@@ -40,42 +36,29 @@ export default function Signup() {
     setLoading(true);
     setError('');
     try {
-      // 1. Create user in Firebase first
-      const fbUserCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
-      const fbUser = fbUserCredential.user;
-      
-      // 2. Send professional verification link
-      await sendEmailVerification(fbUser);
-      
-      // 3. Register in our MongoDB
       const payload = {
         ...form,
-        firebaseUid: fbUser.uid,
+        email: form.email.trim().toLowerCase(),
         location: { type: 'Point', coordinates: coords }
       };
+
+      if (phoneUpgradeMode && token) {
+        await api.post('/api/auth/link-email', payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await api.post('/api/auth/register', payload);
+      }
       
-      const res = phoneUpgradeMode && token
-        ? await api.post('/api/auth/link-email', payload, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-        : await api.post('/api/auth/register', payload);
-      
-      setSuccess(`Account created! A verification link has been sent to ${form.email}. Please verify your email before logging in.`);
+      setSuccess(`Account created! You can now log in immediately with your credentials.`);
       window.scrollTo(0, 0); // Show success message at top
     } catch (err) {
       console.error('Signup error:', err);
       let msg = "Registration failed.";
-      if (err.code === 'auth/email-already-in-use') msg = "This email is already registered.";
-      if (err.code === 'auth/weak-password') msg = "Password is too weak.";
       setError(err.response?.data?.error || err.response?.data?.message || msg);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleVerificationComplete = (userData) => {
-    persistSession(userData);
-    navigate('/dashboard');
   };
 
   return (
@@ -228,7 +211,7 @@ export default function Signup() {
 
         <button
           type="submit"
-          disabled={loading || !coords}
+          disabled={loading}
           className="btn-primary mt-1"
         >
           {loading ? 'Saving...' : (

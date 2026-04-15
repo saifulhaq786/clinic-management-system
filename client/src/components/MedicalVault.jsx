@@ -1,31 +1,49 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Download, Calendar, Stethoscope } from 'lucide-react';
 import api from '../api';
 
 export default function MedicalVault() {
   const [vault, setVault] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user'));
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
 
   useEffect(() => {
-    fetchVault();
-  }, []);
-
-  const fetchVault = async () => {
-    try {
-      const res = await api.get('/api/appointments/list', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const completed = res.data.filter(a => a.status === 'completed');
-      setVault(completed);
-    } catch (err) {
-      console.error('Error fetching vault:', err);
-    } finally {
-      setLoading(false);
+    if (!token || !user?.id) {
+      navigate('/login');
+      return;
     }
-  };
+    let isCancelled = false;
+
+    const loadVault = async () => {
+      try {
+        const res = await api.get('/api/appointments/list', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const completed = res.data.filter(a => a.status === 'completed');
+        if (!isCancelled) {
+          setVault(completed);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error('Error fetching vault:', err);
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadVault();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [navigate, token, user?.id]);
 
   if (loading) {
     return <div className="text-center text-[#64748b]">Loading medical records...</div>;
@@ -51,7 +69,7 @@ export default function MedicalVault() {
                 </h4>
                 <p className="text-[#64748b] text-sm mt-1">
                   <Calendar size={14} className="inline mr-1" />
-                  {new Date(record.completedDate).toLocaleDateString()}
+                  {new Date(record.completedDate || record.updatedAt || record.createdAt).toLocaleDateString()}
                 </p>
               </div>
             </div>

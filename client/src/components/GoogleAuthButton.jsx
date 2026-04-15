@@ -4,9 +4,9 @@ import { useGoogleLogin } from '@react-oauth/google';
 import api from '../api';
 import { persistSession } from '../authSession';
 
-export default function GoogleAuthButton({ role = 'patient', location, setError }) {
+export default function GoogleAuthButton({ role = null, location, setError }) {
   const navigate = useNavigate();
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
   const [showRoleSelect, setShowRoleSelect] = React.useState(false);
   const [selectedRole, setSelectedRole] = React.useState('patient');
@@ -16,9 +16,10 @@ export default function GoogleAuthButton({ role = 'patient', location, setError 
   const handleGoogleSuccess = async (tokenResponse, finalRole = null) => {
     setLoading(true);
     try {
+      const selectedRole = finalRole || role;
       const res = await api.post('/api/auth/google', {
         accessToken: tokenResponse?.access_token || tempToken?.access_token,
-        role: finalRole || role,
+        role: selectedRole,
         location
       });
       persistSession(res.data);
@@ -37,14 +38,26 @@ export default function GoogleAuthButton({ role = 'patient', location, setError 
 
   const login = useGoogleLogin({
     onSuccess: handleGoogleSuccess,
-    onError: () => setError?.('Google sign-in blocked or cancelled.'),
+    onError: (error) => {
+      console.error('Google Auth Error:', error);
+      const detail = error?.error || error?.message || 'popup_failed_to_open';
+      if (detail.includes('popup') || detail.includes('blocked')) {
+        setError?.('Google sign-in popup was blocked. Allow popups for this site or disable browser shields/ad blockers, then try again.');
+      } else {
+        setError?.(`Google sign-in failed. (${detail})`);
+      }
+    },
+    flow: 'implicit',
+    ux_mode: 'popup',
+    scope: 'openid email profile',
+    prompt: 'select_account',
   });
 
   const confirmRoleAndLogin = () => {
     handleGoogleSuccess(tempToken, selectedRole);
   };
 
-  if (!googleClientId) return null;
+  if (!googleClientId?.trim()) return null;
 
   return (
     <div className="space-y-4">
@@ -100,7 +113,7 @@ export default function GoogleAuthButton({ role = 'patient', location, setError 
           onClick={() => {
             try {
               login();
-            } catch (e) {
+            } catch {
               setError?.("Google Login is blocked by your browser. Please disable Brave Shields/Ad-blockers.");
             }
           }}

@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
   phoneOTP: { type: String, default: null }, // Phone
   otpExpiry: { type: Date, default: null }, // Shared expiry for current verification logic
   googleId: { type: String, default: null },
-  firebaseUid: { type: String, default: null, unique: true, sparse: true },
+  firebaseUid: { type: String, default: undefined, unique: true, sparse: true },
   avatar: { type: String, default: null },
   
   // Location

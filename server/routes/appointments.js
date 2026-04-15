@@ -58,7 +58,7 @@ router.get('/nearby', auth, async (req, res) => {
         specialty: 'General Hospital',
         rating: 4.8,
         totalReviews: 124,
-        distance: parseFloat((Math.random() * 5 + 1).toFixed(2)),
+        distance: 2.4,
         isExternal: true,
         address: '123 Medical Blvd'
       },
@@ -68,7 +68,7 @@ router.get('/nearby', auth, async (req, res) => {
         specialty: 'Multispecialty',
         rating: 4.5,
         totalReviews: 89,
-        distance: parseFloat((Math.random() * 5 + 2).toFixed(2)),
+        distance: 4.1,
         isExternal: true,
         address: '45 Wellness Ave'
       },
@@ -78,7 +78,7 @@ router.get('/nearby', auth, async (req, res) => {
         specialty: 'Urgent Care',
         rating: 4.2,
         totalReviews: 56,
-        distance: parseFloat((Math.random() * 5 + 3).toFixed(2)),
+        distance: 6.3,
         isExternal: true,
         address: '77 Emergency Rd'
       }

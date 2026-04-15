@@ -8,6 +8,17 @@ import Profile from './Profile';
 import BloodBank from './components/BloodBank';
 import MedicalVault from './components/MedicalVault';
 
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem('token');
+  const user = localStorage.getItem('user');
+
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 export default function App() {
   return (
     <Router>
@@ -15,10 +26,10 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/mobile-login" element={<MobileLogin />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/blood-bank" element={<BloodBank />} />
-        <Route path="/medical-vault" element={<div className="min-h-screen bg-[#050810] p-8 max-w-4xl mx-auto"><h2 className="text-3xl font-black text-white mb-6">Medical Vault</h2><MedicalVault /></div>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/blood-bank" element={<ProtectedRoute><BloodBank /></ProtectedRoute>} />
+        <Route path="/medical-vault" element={<ProtectedRoute><div className="min-h-screen bg-[#050810] p-8 max-w-4xl mx-auto"><h2 className="text-3xl font-black text-white mb-6">Medical Vault</h2><MedicalVault /></div></ProtectedRoute>} />
         {/* Default route redirects to login */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

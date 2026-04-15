@@ -4,7 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import App from './App.jsx'
 import './index.css' // <-- THIS IS THE BRIDGE. DO NOT REMOVE THIS.
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim()
 
 const app = (
   <React.StrictMode>

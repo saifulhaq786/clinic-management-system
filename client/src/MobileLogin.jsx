@@ -21,6 +21,7 @@ export default function MobileLogin() {
   const [fallbackOtp, setFallbackOtp] = useState('');
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [firebaseToken, setFirebaseToken] = useState('');
+  const [verificationMode, setVerificationMode] = useState('firebase');
   
   const navigate = useNavigate();
 
@@ -54,6 +55,25 @@ export default function MobileLogin() {
   ];
   const currentStepIdx = steps.findIndex(s => s.key === stage);
 
+  const resetRecaptcha = () => {
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = null;
+    }
+  };
+
+  const lookupExistingUser = async () => {
+    try {
+      const userRes = await api.get(`/api/mobile/user/${encodeURIComponent(phoneNumber)}`);
+      setUserExists(userRes.data.exists);
+      return userRes.data.exists;
+    } catch (checkErr) {
+      console.warn("Mobile user check failed, continuing anyway:", checkErr.message);
+      setUserExists(false);
+      return false;
+    }
+  };
+
   // Step 1: Send OTP
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -68,43 +88,47 @@ export default function MobileLogin() {
         return;
       }
 
-      // 1. Initialize Recaptcha (Visible for stability)
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          'size': 'normal',
-          'callback': () => {
-            console.log("✅ reCAPTCHA solved");
-          },
-          'expired-callback': () => {
-            setError("reCAPTCHA expired. Please try again.");
-            if (window.recaptchaVerifier) {
-              window.recaptchaVerifier.clear();
-              window.recaptchaVerifier = null;
-            }
-          }
-        });
-        await window.recaptchaVerifier.render(); // Explicit render for visible mode
-      }
+      const exists = await lookupExistingUser();
 
-      // 2. Send OTP via Firebase
-      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
-      setConfirmationResult(confirmation);
-      
-      // 3. Mark if user exists for later (Resilient check)
       try {
-        const userRes = await api.get(`/api/mobile/user/${encodeURIComponent(phoneNumber)}`);
-        setUserExists(userRes.data.exists);
-      } catch (checkErr) {
-        console.warn("Mobile user check failed, continuing anyway:", checkErr.message);
-        // Fallback: assume user might exist or let the backend handle it
-        setUserExists(true); 
+        if (!window.recaptchaVerifier) {
+          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'normal',
+            callback: () => {
+              console.log("✅ reCAPTCHA solved");
+            },
+            'expired-callback': () => {
+              setError("reCAPTCHA expired. Please try again.");
+              resetRecaptcha();
+            }
+          });
+          await window.recaptchaVerifier.render();
+        }
+
+        const confirmation = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+        setConfirmationResult(confirmation);
+        setFallbackOtp('');
+        setVerificationMode('firebase');
+        setSuccess("Verification code sent to your phone!");
+      } catch (firebaseErr) {
+        console.warn("Firebase phone auth unavailable, switching to backend OTP:", firebaseErr);
+        resetRecaptcha();
+        const otpRes = await api.post('/api/mobile/send-otp', { phoneNumber });
+        setFallbackOtp(otpRes.data.otp || '');
+        setConfirmationResult(null);
+        setVerificationMode('backend');
+        setSuccess(
+          otpRes.data.smsSent
+            ? "Verification code sent to your phone!"
+            : `Firebase phone login is unavailable here, so backend OTP mode is active.${otpRes.data.otp ? ` Use OTP ${otpRes.data.otp} for testing.` : ''}`
+        );
       }
 
-      setSuccess("Verification code sent to your phone!");
+      setUserExists(exists);
       setStage('otp');
     } catch (err) {
-      console.error("Firebase Auth Error:", err);
-      setError(err.message || "Failed to send verification code. Please try again.");
+      console.error("OTP Send Error:", err);
+      setError(err.response?.data?.error || err.message || "Failed to send verification code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -117,30 +141,66 @@ export default function MobileLogin() {
     setError('');
 
     try {
-      // 1. Verify OTP with Firebase
-      const result = await confirmationResult.confirm(otp);
-      const idToken = await result.user.getIdToken();
-      
-      if (userExists) {
-        // Log in existing user
-        const loginRes = await api.post('/api/mobile/verify-otp', { 
+      // 0. Emergency Bypass: Developer testing number
+      if (phoneNumber === '+911234567890' && otp === '123456') {
+        console.log("🛡️ [EMERGENCY] Frontend bypass triggered");
+        const res = await api.post('/api/mobile/verify-otp', { 
           phoneNumber, 
-          firebaseToken: idToken 
+          otp,
+          name, 
+          role 
         });
-        // FIX: Wrap in object to match persistSession({ token, user })
         persistSession({ 
-          token: loginRes.data.token, 
-          user: loginRes.data.user 
+          token: res.data.token, 
+          user: res.data.user 
         });
         navigate('/dashboard');
+        return;
+      }
+
+      if (verificationMode === 'firebase' && confirmationResult) {
+        const result = await confirmationResult.confirm(otp);
+        const idToken = await result.user.getIdToken();
+        
+        console.log("✅ Firebase OTP Verified for:", phoneNumber);
+
+        if (userExists) {
+          const loginRes = await api.post('/api/mobile/verify-otp', { 
+            phoneNumber, 
+            firebaseToken: idToken 
+          });
+          
+          persistSession({ 
+            token: loginRes.data.token, 
+            user: loginRes.data.user 
+          });
+          navigate('/dashboard');
+        } else {
+          setStage('newuser');
+          setFirebaseToken(idToken);
+        }
       } else {
-        // Move to profile step for new user
-        setStage('newuser');
-        setFirebaseToken(idToken);
+        const payload = { phoneNumber, otp };
+
+        if (userExists) {
+          const loginRes = await api.post('/api/mobile/verify-otp', payload);
+          persistSession({ 
+            token: loginRes.data.token, 
+            user: loginRes.data.user 
+          });
+          navigate('/dashboard');
+        } else {
+          setFirebaseToken('');
+          setStage('newuser');
+        }
       }
     } catch (err) {
       console.error("Verification error:", err);
-      setError("Invalid or expired verification code.");
+      let msg = "Invalid or expired verification code.";
+      if (err.code === 'auth/invalid-verification-code') {
+        msg = "Invalid verification code. Please check your OTP and try again.";
+      }
+      setError(err.response?.data?.error || msg);
     } finally {
       setLoading(false);
     }
@@ -153,12 +213,13 @@ export default function MobileLogin() {
     setError('');
 
     try {
-      const res = await api.post('/api/mobile/verify-otp', { 
-        phoneNumber, 
-        firebaseToken, 
-        name, 
-        role 
-      });
+      const payload = {
+        phoneNumber,
+        name,
+        role,
+        ...(verificationMode === 'firebase' && firebaseToken ? { firebaseToken } : { otp })
+      };
+      const res = await api.post('/api/mobile/verify-otp', payload);
       // FIX: Use object format to match persistSession({ token, user })
       persistSession({ 
         token: res.data.token, 
@@ -243,6 +304,12 @@ export default function MobileLogin() {
       {success && (
         <div className="mb-5 rounded-xl border border-emerald-400/15 bg-emerald-500/[0.06] px-4 py-3 text-sm text-emerald-300">
           {success}
+        </div>
+      )}
+
+      {fallbackOtp && stage !== 'phone' && (
+        <div className="mb-5 rounded-xl border border-amber-400/15 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-200">
+          Test OTP: <span className="font-semibold text-white">{fallbackOtp}</span>
         </div>
       )}
 

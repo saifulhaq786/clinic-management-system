@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Droplet, MapPin, Phone, AlertTriangle, Plus, CheckCircle } from 'lucide-react';
 import api from '../api';
 
@@ -16,12 +17,42 @@ export default function BloodBank() {
     urgency: 'Normal'
   });
   
-  const user = JSON.parse(localStorage.getItem('user'));
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    fetchRequests();
-  }, []);
+    if (!token || !user?.id) {
+      navigate('/login');
+      return;
+    }
+    let isCancelled = false;
+
+    const loadRequests = async () => {
+      try {
+        const res = await api.get('/api/blood/list', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!isCancelled) {
+          setRequests(res.data);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error("Failed to fetch blood requests", err);
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadRequests();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [navigate, token, user?.id]);
 
   const fetchRequests = async () => {
     try {
@@ -155,8 +186,9 @@ export default function BloodBank() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {requests.map(req => {
-            const isMyRequest = req.requesterId._id === user.id;
-            const alreadyPledged = req.donors.some(d => d.donorId === user.id);
+            const requesterId = req.requesterId?._id || req.requesterId;
+            const isMyRequest = requesterId?.toString?.() === user?.id?.toString?.();
+            const alreadyPledged = req.donors.some(d => (d.donorId?._id || d.donorId)?.toString?.() === user?.id?.toString?.());
             const progress = (req.donors.length / req.unitsRequired) * 100;
 
             return (

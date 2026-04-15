@@ -12,11 +12,23 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   
   const navigate = useNavigate();
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null');
+    } catch {
+      return null;
+    }
+  });
   const token = localStorage.getItem('token');
 
   const [editForm, setEditForm] = useState({ 
-    name: '', bio: '', specialty: '', phone: '', age: '', gender: 'Not Specified', bloodGroup: '' 
+    name: user?.name || '',
+    bio: user?.bio || '',
+    specialty: user?.specialty || '',
+    phone: user?.phone || '',
+    age: user?.age || '',
+    gender: user?.gender || 'Not Specified',
+    bloodGroup: user?.bloodGroup || ''
   });
 
   useEffect(() => {
@@ -24,23 +36,13 @@ export default function Profile() {
       navigate('/login');
       return;
     }
-    
-    setEditForm({ 
-      name: user?.name || '', 
-      bio: user?.bio || '', 
-      specialty: user?.specialty || '',
-      phone: user?.phone || '',
-      age: user?.age || '',
-      gender: user?.gender || 'Not Specified',
-      bloodGroup: user?.bloodGroup || ''
-    });
 
     const fetchAppointments = async () => {
       try {
         const res = await api.get('/api/appointments/list', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setAppointments(user.role === 'doctor' ? res.data : res.data.filter(apt => apt.status === 'completed'));
+        setAppointments(user?.role === 'doctor' ? res.data : res.data.filter(apt => apt.status === 'completed'));
       } catch (err) { 
         console.error("Error:", err);
       }
@@ -56,6 +58,15 @@ export default function Profile() {
       const updatedUser = { ...user, ...res.data };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setUser(updatedUser);
+      setEditForm({
+        name: updatedUser?.name || '',
+        bio: updatedUser?.bio || '',
+        specialty: updatedUser?.specialty || '',
+        phone: updatedUser?.phone || '',
+        age: updatedUser?.age || '',
+        gender: updatedUser?.gender || 'Not Specified',
+        bloodGroup: updatedUser?.bloodGroup || ''
+      });
       setIsEditing(false);
       alert('Profile updated!');
     } catch (err) {

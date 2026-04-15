@@ -4,8 +4,6 @@ import { ChevronRight, LogIn, ShieldCheck } from 'lucide-react';
 import api from './api';
 import AuthShell from './components/AuthShell';
 import GoogleAuthButton from './components/GoogleAuthButton';
-import { auth } from './firebase';
-import { signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { persistSession } from './authSession';
 
 export default function Login() {
@@ -14,7 +12,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [verificationEmail, setVerificationEmail] = useState('');
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -29,46 +26,17 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      // 1. Sign in with Firebase first to check verification status
-      const fbUserCredential = await signInWithEmailAndPassword(auth, email, password);
-      const fbUser = fbUserCredential.user;
-
-      if (!fbUser.emailVerified) {
-        // Not verified yet - provide option to resend
-        setError("Please verify your email address to continue. Check your inbox for the link.");
-        
-        // Optional: Helper to resend link
-        setVerificationEmail(email);
-        setLoading(false);
-        return;
-      }
-
-      // 2. Email is verified - Get Firebase Token and sign in to backend
-      const idToken = await fbUser.getIdToken();
-      const res = await api.post('/api/auth/login', { email, password, firebaseToken: idToken });
+      const res = await api.post('/api/auth/login', {
+        email: email.trim().toLowerCase(),
+        password
+      });
       persistSession(res.data);
       navigate('/dashboard');
     } catch (err) {
       console.error("Login Error:", err);
-      let msg = "Login failed. Please check your credentials.";
-      if (err.code === 'auth/user-not-found') msg = "No account found with this email.";
-      if (err.code === 'auth/wrong-password') msg = "Incorrect password.";
-      if (err.code === 'auth/invalid-credential') msg = "Invalid credentials. (Tip: If you just migrated, please Sign Up fresh for this new project)";
-      
-      setError(err.response?.data?.message || msg);
+      setError(err.response?.data?.message || err.response?.data?.error || "Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    try {
-      if (auth.currentUser) {
-        await sendEmailVerification(auth.currentUser);
-        setError("Verification link resent! Please check your inbox.");
-      }
-    } catch (err) {
-      setError("Failed to resend. Please try again later.");
     }
   };
 
@@ -95,14 +63,6 @@ export default function Login() {
           error.includes('resent') ? 'border-emerald-400/15 bg-emerald-500/[0.06] text-emerald-300' : 'border-red-400/15 bg-red-500/[0.06] text-red-300'
         }`}>
           {error}
-          {error.includes('verify your email') && (
-            <button 
-              onClick={handleResend}
-              className="block mt-2 font-bold text-teal-300 hover:text-teal-200 underline"
-            >
-              Resend verification link
-            </button>
-          )}
         </div>
       )}
 
@@ -141,7 +101,7 @@ export default function Login() {
 
       {/* Google */}
       <div className="mt-6">
-        <GoogleAuthButton setError={setError} location={coords} />
+        <GoogleAuthButton setError={setError} location={coords} role={null} />
       </div>
 
       {/* Links */}
