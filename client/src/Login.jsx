@@ -28,7 +28,8 @@ export default function Login() {
     try {
       const res = await api.post('/api/auth/login', {
         email: email.trim().toLowerCase(),
-        password
+        password,
+        location: coords
       });
       persistSession(res.data);
       navigate('/dashboard');

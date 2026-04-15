@@ -165,14 +165,15 @@ export default function MobileLogin() {
         console.log("✅ Firebase OTP Verified for:", phoneNumber);
 
         if (userExists) {
-          const loginRes = await api.post('/api/mobile/verify-otp', { 
-            phoneNumber, 
-            firebaseToken: idToken 
+          const loginRes = await api.post('/api/mobile/verify-otp', {
+            phoneNumber,
+            firebaseToken: idToken,
+            location: coords
           });
-          
-          persistSession({ 
-            token: loginRes.data.token, 
-            user: loginRes.data.user 
+
+          persistSession({
+            token: loginRes.data.token,
+            user: loginRes.data.user
           });
           navigate('/dashboard');
         } else {
@@ -183,10 +184,13 @@ export default function MobileLogin() {
         const payload = { phoneNumber, otp };
 
         if (userExists) {
-          const loginRes = await api.post('/api/mobile/verify-otp', payload);
-          persistSession({ 
-            token: loginRes.data.token, 
-            user: loginRes.data.user 
+          const loginRes = await api.post('/api/mobile/verify-otp', {
+            ...payload,
+            location: coords
+          });
+          persistSession({
+            token: loginRes.data.token,
+            user: loginRes.data.user
           });
           navigate('/dashboard');
         } else {
@@ -219,7 +223,10 @@ export default function MobileLogin() {
         role,
         ...(verificationMode === 'firebase' && firebaseToken ? { firebaseToken } : { otp })
       };
-      const res = await api.post('/api/mobile/verify-otp', payload);
+      const res = await api.post('/api/mobile/verify-otp', {
+        ...payload,
+        location: coords
+      });
       // FIX: Use object format to match persistSession({ token, user })
       persistSession({ 
         token: res.data.token, 
