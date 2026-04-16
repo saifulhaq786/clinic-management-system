@@ -112,6 +112,7 @@ app.use('/api/prescriptions', require('./routes/prescriptions'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/blood', require('./routes/blood')); // New Blood Bank routes
+app.use('/api/clinics', require('./routes/clinics')); // New Clinics registration routes
 
 
 // Health check

@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, lowercase: true, trim: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['patient', 'doctor'], default: 'patient' },
+  role: { type: String, enum: ['patient', 'doctor', 'clinic_admin'], default: 'patient' },
   
   // --- NEW MEDICAL & CONTACT DETAILS ---
   phone: { type: String, default: undefined, sparse: true, unique: true },
@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema({
   bio: { type: String, default: 'Dedicated medical professional.' },
   rating: { type: Number, default: 4.5, min: 0, max: 5 },
   totalReviews: { type: Number, default: 0 },
+  affiliatedClinics: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' }],
   
   // Availability
   isAvailable: { type: Boolean, default: true },

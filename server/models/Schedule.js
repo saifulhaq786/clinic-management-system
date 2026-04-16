@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const scheduleSchema = new mongoose.Schema({
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  clinicId: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic', default: null }, // Link schedule to clinic
   dayOfWeek: { type: Number, enum: [0, 1, 2, 3, 4, 5, 6], required: true }, // 0=Sunday, 6=Saturday
   startTime: String, // HH:mm format
   endTime: String, // HH:mm format

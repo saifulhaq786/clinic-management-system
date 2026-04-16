@@ -37,8 +37,7 @@ export default function MedicalChatBot() {
     try {
       const res = await api.post(
         '/api/chat/medical',
-        { query: input },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { query: input }
       );
 
       const botMessage = {

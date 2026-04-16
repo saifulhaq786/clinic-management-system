@@ -1,5 +1,7 @@
 import React from 'react';
 import { HeartPulse, ShieldCheck, Stethoscope } from 'lucide-react';
+import { motion } from 'framer-motion';
+import Background3D from './Background3D';
 
 const defaultHighlights = [
   {
@@ -28,64 +30,84 @@ export default function AuthShell({
 }) {
   return (
     <div
-      className="min-h-screen text-white"
+      className="min-h-screen text-white relative flex"
       style={{
-        background: 'radial-gradient(ellipse at 20% 0%, rgba(20,184,166,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 100%, rgba(13,148,136,0.06) 0%, transparent 50%), #060b18'
+        background: '#040810'
       }}
     >
-      <div className="relative mx-auto grid min-h-screen max-w-7xl gap-8 px-4 py-8 md:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:px-10 lg:py-10">
+      <Background3D />
+      
+      <div className="relative mx-auto grid min-h-screen max-w-7xl gap-8 px-4 py-8 md:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:px-10 lg:py-10 z-10 w-full">
         
         {/* Ambient glow */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -left-20 top-[15%] h-72 w-72 rounded-full bg-teal-500/[0.04] blur-[100px]" />
-          <div className="absolute -right-20 bottom-[10%] h-80 w-80 rounded-full bg-teal-400/[0.03] blur-[120px]" />
+          <div className="absolute -left-20 top-[15%] h-[500px] w-[500px] rounded-full bg-teal-500/[0.06] blur-[150px]" />
+          <div className="absolute -right-20 bottom-[10%] h-[500px] w-[500px] rounded-full bg-teal-400/[0.04] blur-[150px]" />
         </div>
 
         {/* Left Panel — Brand */}
-        <section className="relative flex flex-col justify-between rounded-3xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-sm md:p-8 lg:p-10">
+        <motion.section 
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="relative flex flex-col justify-between rounded-3xl border border-white/[0.05] bg-white/[0.01] p-6 backdrop-blur-md md:p-8 lg:p-10 shadow-2xl shadow-black/50"
+        >
           <div>
             {/* Badge */}
-            <div className="mb-10 inline-flex items-center gap-2 rounded-full border border-teal-400/15 bg-teal-400/[0.06] px-4 py-2 text-xs font-medium tracking-wide text-teal-300 animate-pulse-glow">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="mb-10 inline-flex items-center gap-2 rounded-full border border-teal-400/20 bg-teal-400/[0.08] px-4 py-2 text-xs font-medium tracking-wide text-teal-300 shadow-[0_0_15px_rgba(45,212,191,0.2)]"
+            >
               <div className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-pulse" />
-              Elite Clinic
-            </div>
+              Elite Clinic VIP
+            </motion.div>
 
-            <p className="text-xs font-medium tracking-widest text-teal-300/70 uppercase">
+            <p className="text-xs font-medium tracking-widest text-teal-300/80 uppercase">
               {eyebrow}
             </p>
-            <h1 className="mt-4 max-w-xl text-3xl font-semibold leading-snug text-white md:text-4xl lg:text-[2.6rem] lg:leading-tight">
+            <h1 className="mt-4 max-w-xl text-3xl font-semibold leading-snug text-white md:text-4xl lg:text-[2.6rem] lg:leading-tight drop-shadow-lg">
               {title}
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-slate-400 md:text-[1.05rem]">
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-300 md:text-[1.05rem]">
               {description}
             </p>
           </div>
 
           {/* Feature highlights */}
           <div className="mt-10 grid gap-3">
-            {highlights.map(({ icon: Icon, title: itemTitle, description: itemDescription }) => (
-              <div
+             {highlights.map(({ icon: Icon, title: itemTitle, description: itemDescription }, i) => (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + i * 0.1, duration: 0.5 }}
                 key={itemTitle}
-                className="flex items-start gap-4 rounded-2xl border border-white/[0.04] bg-white/[0.015] p-4 transition-colors duration-200 hover:border-white/[0.08]"
+                className="flex items-start gap-4 rounded-2xl border border-white/[0.04] bg-white/[0.015] p-4 transition-all duration-300 hover:border-teal-400/30 hover:bg-white/[0.04] hover:shadow-[0_0_20px_rgba(45,212,191,0.1)] group"
               >
-                <div className="flex-shrink-0 rounded-xl border border-teal-400/10 bg-teal-400/[0.06] p-2.5 text-teal-300">
-                  <Icon size={16} />
+                <div className="flex-shrink-0 rounded-xl border border-teal-400/20 bg-teal-400/[0.08] p-2.5 text-teal-300 group-hover:scale-110 transition-transform duration-300">
+                  <Icon size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">{itemTitle}</p>
-                  <p className="mt-0.5 text-sm leading-relaxed text-slate-400">{itemDescription}</p>
+                  <p className="text-sm font-medium text-white group-hover:text-teal-200 transition-colors">{itemTitle}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-400">{itemDescription}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
 
         {/* Right Panel — Form */}
-        <section className="relative flex items-center justify-center perspective-1000">
-          <div className="w-full max-w-xl rounded-3xl border border-white/[0.1] p-6 md:p-8 lg:p-10 animate-float-3d glass-panel preserve-3d">
+        <motion.section 
+          initial={{ opacity: 0, y: 50, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
+          className="relative flex items-center justify-center perspective-1000"
+        >
+          <div className="w-full max-w-xl rounded-3xl border border-white/[0.08] bg-black/40 backdrop-blur-xl p-6 md:p-8 lg:p-10 preserves-3d shadow-[0_0_40px_rgba(0,0,0,0.5)]">
             {children}
           </div>
-        </section>
+        </motion.section>
       </div>
     </div>
   );

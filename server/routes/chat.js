@@ -13,35 +13,57 @@ router.post('/medical', auth, async (req, res) => {
       return res.status(400).json({ error: "Query cannot be empty" });
     }
 
-    // Check if Gemini API key exists
     const geminiKey = process.env.GEMINI_API_KEY;
     
+    // Diagnostic: Check for standard API key format
+    if (geminiKey && !geminiKey.startsWith('AIza')) {
+      return res.json({ 
+        response: "⚠️ SYSTEM NOTICE: The current Gemini API Key format appears to be a temporary token rather than a permanent API Key. Please ensure your key in .env starts with 'AIzaSy' otherwise medical queries will fail." 
+      });
+    }
+
     if (!geminiKey) {
       return res.json({ 
         response: "System Notice: I am disconnected from my AI Network. To enable real intelligent responses, please add your `GEMINI_API_KEY` to the Elite Clinic backend server `.env` file and restart." 
       });
     }
 
-    // Use Google Gemini for real AI responses
     const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    
+    // Fallback logic: Try 1.5-flash first, then regular Pro
+    const tryModels = ["gemini-1.5-flash", "gemini-pro"];
+    let responseText = "";
+    let lastError = null;
 
-    const systemPrompt = `You are a helpful, professional medical AI assistant named Elite Clinic AI. 
-Provide accurate, general medical information and health advice. 
-Always remind users to consult with human healthcare professionals for serious conditions. 
-Be empathetic, exceptionally clear, and provide evidence-based information.
-Do not provide definitive medical diagnoses or prescribe medications - refer to doctors for that.
+    for (const modelName of tryModels) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(`System Prompt: You are Elite Clinic AI. Use professional medical tone. Remind users to consult doctors.
+        User Query: ${query}`);
+        responseText = result.response.text();
+        if (responseText) break; 
+      } catch (err) {
+        lastError = err;
+        console.warn(`Model ${modelName} failed, trying next...`);
+        continue;
+      }
+    }
 
-User Query: ${query}`;
+    if (!responseText && lastError) throw lastError;
 
-    const result = await model.generateContent(systemPrompt);
-    const response = result.response.text();
-
-    res.json({ response });
+    res.json({ response: responseText });
 
   } catch (err) {
     console.error("Chat Error:", err);
-    res.status(500).json({ error: "Error processing your query across the AI network. Please try again." });
+    
+    // Specific check for expired/invalid keys to guide the user
+    if (err.message?.includes('expired') || err.message?.includes('API_KEY_INVALID') || err.status === 400) {
+      return res.json({ 
+        response: "❌ YOUR API KEY HAS EXPIRED: The provided Gemini key is no longer valid. Please visit https://aistudio.google.com/app/apikey to generate a new key and update your .env file." 
+      });
+    }
+
+    res.status(500).json({ error: "Error processing your query across the AI network. If this persists, please verify your API key in the server logs." });
   }
 });
 
